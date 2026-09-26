@@ -9,3 +9,4 @@ worker.js.map
 *.wasm
 .fuse_hidden*
 .tap
+scratch-vm/
