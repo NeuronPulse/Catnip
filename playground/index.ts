@@ -9,6 +9,35 @@ type WorkerMessage =
     | { kind: "ready" }
     | { kind: "error", message: string };
 
+/**
+ * The Scratch key code a DOM key event is about, or null for a key Scratch
+ * does not treat as a key.
+ *
+ * Mirrors Keyboard._keyStringToScratchKey in scratch-vm: a key is a single
+ * character, upper-cased, plus the space, arrow and enter keys. Everything
+ * else — modifiers, function keys, non-English letters — is not a key, and
+ * counting those would make "key any pressed?" answer yes for them.
+ */
+function scratchKeyCode(event: KeyboardEvent): number | null {
+    switch (event.key) {
+        case " ": return 32;
+        case "Enter": return 13;
+        case "ArrowLeft": return 37;
+        case "ArrowUp": return 38;
+        case "ArrowRight": return 39;
+        case "ArrowDown": return 40;
+    }
+
+    if (event.key.length !== 1) return null;
+
+    const firstChar = event.key.charCodeAt(0);
+    const code = (firstChar >= 97 && firstChar <= 122) ? firstChar - 32 : firstChar;
+
+    if (code < 32 || code > 126) return null;
+
+    return code;
+}
+
 async function main() {
     const renderer = new CatnipRenderer();
     const worker = new Worker("worker.js");
@@ -31,11 +60,15 @@ async function main() {
 
     function attachInput() {
         document.addEventListener("keydown", (event) => {
-            worker.postMessage({ kind: "key", down: true, keyCode: event.keyCode });
+            const keyCode = scratchKeyCode(event);
+            if (keyCode === null) return;
+            worker.postMessage({ kind: "key", down: true, keyCode });
         });
 
         document.addEventListener("keyup", (event) => {
-            worker.postMessage({ kind: "key", down: false, keyCode: event.keyCode });
+            const keyCode = scratchKeyCode(event);
+            if (keyCode === null) return;
+            worker.postMessage({ kind: "key", down: false, keyCode });
         });
 
         document.addEventListener("mousemove", (event) => {

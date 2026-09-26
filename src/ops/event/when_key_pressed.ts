@@ -15,7 +15,7 @@ export const when_key_pressed_trigger = new class extends CatnipScriptTriggerTyp
 
         let key: number | null;
 
-        if (inputs.key === "any") {
+        if (Cast.isAnyKey(inputs.key)) {
             key = null;
         } else {
             key = Cast.toKeyCode(inputs.key);

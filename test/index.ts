@@ -6,6 +6,7 @@ import { op_log } from "../src/ops/core/log";
 import { op_const } from "../src/ops/core/const";
 import { op_callback_command } from '../src/ops/core/callback_command';
 import { CatnipValueFormat } from "../src/compiler/CatnipValueFormat";
+import { CatnipEventID } from "../src/CatnipEvents";
 import { test } from "tap"
 
 
@@ -33,6 +34,9 @@ async function main() {
             // left to say "end" with, so it says this instead and the run ends
             // when the last thread does.
             let expectStopped = false;
+            // Key events a "keydown"/"keyup" say asked for, sent between steps:
+            // a project cannot re-enter its own runtime from inside a step.
+            const pendingEvents: [CatnipEventID, number][] = [];
 
             registerSB3CommandBlock("looks_say", (ctx, block) =>
                 op_callback_command.create({
@@ -66,6 +70,13 @@ async function main() {
                             case "expectstop":
                                 expectStopped = true;
                                 break;
+                            case "keydown":
+                            case "keyup":
+                                pendingEvents.push([
+                                    command === "keydown" ? "IO_KEY_PRESSED" : "IO_KEY_RELEASED",
+                                    Number(arg)
+                                ]);
+                                break;
                             case "comment":
                                 t.comment(message);
                                 break;
@@ -88,6 +99,11 @@ async function main() {
             projectModule.start();
 
             do {
+                while (pendingEvents.length !== 0) {
+                    const [eventID, keyCode] = pendingEvents.shift()!;
+                    projectModule.triggerEvent(eventID, keyCode);
+                }
+
                 projectModule.step();
             } while (!didEnd && projectModule.hasRunningThreads());
 

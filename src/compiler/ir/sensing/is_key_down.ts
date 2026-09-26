@@ -31,7 +31,26 @@ export const ir_is_key_down = new class extends CatnipIrInputOpType {
 
             ctx.emitWasm(SpiderOpcodes.drop);
 
+            if (Cast.isAnyKey(keyInput.constantValue)) {
+                // "any" is not a key code: it asks whether any key at all is
+                // down, which the io device counts as they are pressed.
+                ctx.emitWasmGetRuntime();
+                ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructRuntime.getMemberOffset("io"));
+                ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructIO.getMemberOffset("key_down_count"));
+                ctx.emitWasmConst(SpiderNumberType.i32, 0);
+                ctx.emitWasm(SpiderOpcodes.i32_ne);
+
+                return;
+            }
+
             let keyCode = Cast.toKeyCode(keyInput.constantValue);
+
+            if (keyCode < 0) {
+                // A key the io device has no place for is never down.
+                ctx.emitWasmConst(SpiderNumberType.i32, 0);
+
+                return;
+            }
 
             ctx.emitWasmGetRuntime();
             ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructRuntime.getMemberOffset("io"));

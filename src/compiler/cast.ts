@@ -193,8 +193,25 @@ export class Cast {
         }
     }
 
-    static toKeyCode(key: catnip_compiler_constant): number {
+    /**
+     * Is this key argument the special "any" key? "any" is not a key code: it
+     * asks whether any key at all is held down.
+     */
+    static isAnyKey(key: catnip_compiler_constant): boolean {
+        return typeof key === "string" && key === "any";
+    }
 
+    /**
+     * The key code for a key argument, or -1 for a key Catnip cannot track.
+     *
+     * Mirrors Keyboard._keyArgToScratchKey in scratch-vm: a number in the ASCII
+     * range is that character, a few numbers and names are the space, arrow and
+     * enter keys, and anything else is its first character, upper-cased.
+     *
+     * Catnip's io device holds one byte per key, so it only tracks the ASCII
+     * keys; the non-English letters scratch-vm would accept have no code here.
+     */
+    static toKeyCode(key: catnip_compiler_constant): number {
         if (typeof (key) === "number") {
             if (key >= 48 && key <= 90)
                 return key;
@@ -203,19 +220,26 @@ export class Cast {
                 return key;
         }
 
-        key = "" + key;
+        const keyString = "" + key;
 
-        let code = this.KEY_NAME_TO_CODE.get(key);
+        // "any" is not a key: it is a question about all of them, and callers
+        // have to ask about it before they ask about one key.
+        if (Cast.isAnyKey(keyString)) return -1;
 
-        if (code !== undefined) return code;
+        const namedCode = this.KEY_NAME_TO_CODE.get(keyString);
 
-        code = key.toUpperCase().charCodeAt(0);
+        if (namedCode !== undefined) return namedCode;
 
-        if (code >= 48 && code <= 90) return code;
-        if (key === " ") return code;
+        if (keyString.length === 0) return -1;
 
-        CatnipCompilerLogger.warn(`Unknown key code '${key}'`);
-        return 0;
+        // Scratch keys are one character, upper-cased.
+        const firstChar = keyString.charCodeAt(0);
+        const code = (firstChar >= 97 && firstChar <= 122) ? firstChar - 32 : firstChar;
+
+        if (code >= 32 && code <= 126) return code;
+
+        CatnipCompilerLogger.warn(`Unknown key code '${keyString}'`);
+        return -1;
     }
 
 }
