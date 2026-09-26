@@ -3,6 +3,8 @@ export interface CatnipCompilerConfig {
     dump_binaryen: false | "wat" | "as" | "stack";
     dump_ir: boolean;
     dump_wasm_blob: boolean;
+    /** Prints a per-stage timing table after compilation (for benchmarking). */
+    dump_stage_timings: boolean;
     enable_tail_call: boolean;
     enable_optimization_binaryen: boolean | number;
     enable_optimization_variable_inlining: boolean;
@@ -18,6 +20,7 @@ export function catnipCompilerConfigCreateDefault(): CatnipCompilerConfig {
         dump_binaryen: false,
         dump_ir: false,
         dump_wasm_blob: false,
+        dump_stage_timings: false,
         enable_tail_call: true,
         enable_optimization_binaryen: true,
         enable_optimization_variable_inlining: true,

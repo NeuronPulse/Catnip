@@ -4,7 +4,7 @@ import { CatnipIr, CatnipIrInfo } from "./CatnipIr";
 import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
 import { PassVariableInlining } from "./passes/post-analysis/PassVariableInlining";
 import { PassFunctionIndexAllocation } from "./passes/pre-analysis/PassFunctionIndexAllocation";
-import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerStage";
+import { CatnipCompilerPassStage, CatnipCompilerStage, CatnipCompilerStageNames } from "./CatnipCompilerStage";
 import { PassAnalyzeFunctionCallers } from "./passes/pre-analysis/PassAnalyzeFunctionCallers";
 import { PassTransientVariablePropagation } from "./passes/pre-wasm/PassTransientVariablePropagation";
 import { createModule, SpiderElementFuncIdxActive, SpiderFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType, writeModule } from "wasm-spider";
@@ -50,7 +50,14 @@ export class CatnipCompiler {
     private readonly _passes: Map<CatnipCompilerPassStage, CatnipCompilerPass[]>;
     private _stage: CatnipCompilerStage | null;
 
+    private readonly _stageTimings: [string, number][];
+    private _timingLabel: string | null;
+    private _timingAnchor: number;
+
     public get stage() { return this._stage; }
+
+    /** Per-stage compile timings, in submission order. Only populated after createModule(). */
+    public get stageTimings(): ReadonlyArray<readonly [string, number]> { return this._stageTimings; }
 
     public readonly spiderModule: SpiderModule;
     public readonly spiderMemory: SpiderImportMemory;
@@ -76,6 +83,9 @@ export class CatnipCompiler {
         this.config = catnipCompilerConfigPoppulate(config);
         this._passes = new Map();
         this._stage = null;
+        this._stageTimings = [];
+        this._timingLabel = null;
+        this._timingAnchor = 0;
 
         this.addPass(PassAnalyzeFunctionCallers);
 
@@ -146,9 +156,36 @@ export class CatnipCompiler {
         passes.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
     }
 
+    private _stopTiming(): void {
+        if (this._timingLabel === null) return;
+        this._stageTimings.push([this._timingLabel, performance.now() - this._timingAnchor]);
+        this._timingLabel = null;
+    }
+
+    private _startTiming(label: string): void {
+        this._stopTiming();
+        this._timingLabel = label;
+        this._timingAnchor = performance.now();
+    }
+
     private _transitionStage(stage: CatnipCompilerStage | null) {
-        // TODO timing
+        if (stage === null) this._stopTiming();
+        else this._startTiming(CatnipCompilerStageNames[stage]);
         this._stage = stage;
+    }
+
+    private _reportStageTimings(): void {
+        const timings = this._stageTimings;
+        if (timings.length === 0) return;
+
+        let total = 0;
+        for (const [, ms] of timings) total += ms;
+
+        const nameWidth = timings.reduce((w, [name]) => Math.max(w, name.length), 5);
+        const rows = timings.map(([name, ms]) =>
+            `  ${name.padEnd(nameWidth)}  ${ms.toFixed(1).padStart(8)} ms  ${((ms / total) * 100).toFixed(1).padStart(5)} %`);
+
+        CatnipCompilerLogger.log(`stage timings:\n${rows.join("\n")}\n  ${"total".padEnd(nameWidth)}  ${total.toFixed(1).padStart(8)} ms`);
     }
 
     public async createModule(): Promise<CatnipProjectModule> {
@@ -246,9 +283,11 @@ export class CatnipCompiler {
             callbacks[callback.name] = callback.callback;
         }
 
+        this._startTiming("spider_write");
         let moduleSource = writeModule(this.spiderModule, { mergeTypes: false });
 
         if (this.config.enable_optimization_binaryen || this.config.dump_binaryen) {
+            this._startTiming("binaryen");
             const binaryenModule = binaryen.readBinary(moduleSource);
 
             if (this.config.enable_optimization_binaryen) {
@@ -301,8 +340,10 @@ export class CatnipCompiler {
             downloadBlob(moduleSource, "catnip_output.wasm", "application/wasm");
         }
 
+        this._startTiming("wasm_compile");
         const module = await WebAssembly.compile(moduleSource);
 
+        this._startTiming("wasm_instantiate");
         const instance = await WebAssembly.instantiate(module, {
             env: {
                 memory: this.runtimeModule.imports.env.memory,
@@ -323,6 +364,9 @@ export class CatnipCompiler {
         this._irs.length = 0;
 
         this._transitionStage(null);
+
+        if (this.config.dump_stage_timings)
+            this._reportStageTimings();
 
         return projectModule;
     }
