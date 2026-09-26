@@ -7,6 +7,7 @@ import fs from "node:fs/promises";
 //
 // Environment knobs:
 //   BENCH_BINARYEN=0      disable binaryen (default: on, matches the playground)
+//   BENCH_BINARYEN_LEVEL=<n>  binaryen optimize level (default: binaryen's own)
 //   BENCH_INLINE_FORCE=1  force variable inlining (default: off)
 //   BENCH_STEP_RATE=<hz>  simulation step rate (default: the runtime's default).
 //                         A tiny rate makes the step budget effectively
@@ -23,6 +24,8 @@ if (!projectPath) {
 }
 
 const useBinaryen = process.env.BENCH_BINARYEN !== "0";
+const binaryenLevel = process.env.BENCH_BINARYEN_LEVEL === undefined
+    ? undefined : Number(process.env.BENCH_BINARYEN_LEVEL);
 const inlineForce = process.env.BENCH_INLINE_FORCE === "1";
 const stepRate = process.env.BENCH_STEP_RATE === undefined ? undefined : Number(process.env.BENCH_STEP_RATE);
 const warpTimer = process.env.BENCH_WARP_TIMER !== "0";
@@ -41,7 +44,7 @@ async function main() {
 
     const t1 = Date.now();
     const mod = await project.compile({
-        enable_optimization_binaryen: useBinaryen,
+        enable_optimization_binaryen: useBinaryen ? (binaryenLevel ?? true) : false,
         enable_optimization_variable_inlining_force: inlineForce,
         enable_warp_timer: warpTimer,
         dump_stage_timings: true,
@@ -67,7 +70,7 @@ async function main() {
     const avg = stepTimes.reduce((a, b) => a + b, 0) / (stepTimes.length || 1);
 
     console.log(`--- ${projectPath}`);
-    console.log(`binaryen=${useBinaryen} inliningForce=${inlineForce} stepRate=${mod.stepRate}Hz`);
+    console.log(`binaryen=${useBinaryen ? (binaryenLevel ?? "default") : "off"} inliningForce=${inlineForce} stepRate=${mod.stepRate}Hz`);
     console.log(`wasm+parse ${tLoad}ms | compile ${tCompile}ms | ${steps} steps in ${totalStepMs}ms | still running: ${mod.hasRunningThreads()}`);
     console.log(`step ms: p50 ${percentile(stepTimes, 0.5).toFixed(2)} | p95 ${percentile(stepTimes, 0.95).toFixed(2)} | max ${percentile(stepTimes, 1).toFixed(2)} | avg ${avg.toFixed(2)}`);
     try {

@@ -1,5 +1,5 @@
 import { CatnipProject } from "../runtime/CatnipProject";
-import { CatnipCompilerConfig, catnipCompilerConfigPoppulate } from "./CatnipCompilerConfig";
+import { CatnipCompilerConfig, catnipBinaryenOptimizeLevelForSize, catnipCompilerConfigPoppulate } from "./CatnipCompilerConfig";
 import { CatnipIr, CatnipIrInfo } from "./CatnipIr";
 import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
 import { PassVariableInlining } from "./passes/post-analysis/PassVariableInlining";
@@ -292,7 +292,10 @@ export class CatnipCompiler {
 
             if (this.config.enable_optimization_binaryen) {
                 const optLevel = typeof (this.config.enable_optimization_binaryen) === "number" ?
-                    this.config.enable_optimization_binaryen : 4;
+                    this.config.enable_optimization_binaryen :
+                    catnipBinaryenOptimizeLevelForSize(moduleSource.byteLength);
+
+                CatnipCompilerLogger.log(`binaryen: ${(moduleSource.byteLength / 1024).toFixed(0)}KiB module, optimize level ${optLevel}`);
 
                 binaryen.setOptimizeLevel(optLevel);
                 binaryenModule.optimize();
