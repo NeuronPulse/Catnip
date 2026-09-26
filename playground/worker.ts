@@ -82,7 +82,30 @@ async function main() {
     const stepRate = 30;
     let intervalToken: any;
 
+    // Rolling window of frame durations (step + frame) for the periodic report.
+    const stepSamples: number[] = [];
+    const STEP_SAMPLE_LIMIT = 600;
+    let lastStatsAt = performance.now();
+
+    function recordSample(ms: number) {
+        if (stepSamples.length >= STEP_SAMPLE_LIMIT) stepSamples.shift();
+        stepSamples.push(ms);
+
+        const now = performance.now();
+        if (now - lastStatsAt < 5000) return;
+        lastStatsAt = now;
+
+        const sorted = [...stepSamples].sort((a, b) => a - b);
+        const at = (p: number) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))].toFixed(1);
+        const avg = sorted.reduce((a, b) => a + b, 0) / sorted.length;
+        console.log(`[step] n=${sorted.length} p50=${at(0.5)}ms p95=${at(0.95)}ms max=${at(1)}ms avg=${avg.toFixed(1)}ms`);
+        try {
+            console.log(`[gc] ${JSON.stringify(projectModule.getGcStats())}`);
+        } catch { /* gc stats unavailable */ }
+    }
+
     function frame() {
+        const start = performance.now();
         try {
             projectModule.step();
             projectModule.frame();
@@ -92,6 +115,7 @@ async function main() {
             clearInterval(intervalToken);
             workerScope.postMessage({ kind: "error", message: String(e) });
         }
+        recordSample(performance.now() - start);
     }
 
     projectModule.start();
