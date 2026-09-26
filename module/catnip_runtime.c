@@ -24,6 +24,8 @@ catnip_runtime *catnip_runtime_new() {
   rt->gc_page = CATNIP_NULL;
   CATNIP_LIST_INIT(&rt->gc_pages, catnip_gc_page *, 4);
   CATNIP_LIST_INIT(&rt->gc_large_objs, catnip_obj_head *, 0);
+  rt->gc_alloc_since_last_gc = 0;
+  rt->gc_alloc_threshold = CATNIP_GC_MIN_ALLOC_BYTES;
 
 #ifdef CATNIP_GC_STATS
   rt->gc_stats = catnip_mem_alloc(sizeof(catnip_runtime_gc_stats));
@@ -98,7 +100,12 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
     }
 
     ranFirstTick = CATNIP_TRUE;
-    catnip_runtime_gc(runtime);
+
+    // Collecting on every pass over the threads means walking the whole heap
+    // many times per tick, even when almost nothing has been allocated since
+    // the last collection. Wait for enough new garbage to pile up instead.
+    if (runtime->gc_alloc_since_last_gc >= runtime->gc_alloc_threshold)
+      catnip_runtime_gc(runtime);
   }
 }
 

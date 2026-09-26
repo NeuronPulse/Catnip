@@ -58,6 +58,13 @@ typedef struct catnip_runtime_gc_stats catnip_runtime_gc_stats;
 #define CATNIP_HEAP_PAGE_SIZE_BYTES 10485760
 #define CATNIP_HEAP_LARGE_OBJ_SIZE 262144
 
+/* Garbage collection runs once this many bytes have been allocated since the
+ * last collection. The floor keeps a heap of tiny live objects from collecting
+ * on every allocation; the ceiling keeps a heap of large ones from growing
+ * without bound. */
+#define CATNIP_GC_MIN_ALLOC_BYTES (1024 * 1024)
+#define CATNIP_GC_MAX_ALLOC_BYTES (64 * 1024 * 1024)
+
 #define CATNIP_STEP_TIME_MS 10000
 
 struct catnip_runtime {
@@ -92,6 +99,9 @@ struct catnip_runtime {
     /* Monotonic time (see catnip_import_perf_time) by which the current tick must
      * stop stepping threads. Warp loops check this to decide if they should yield. */
     catnip_f64_t tick_deadline;
+
+    catnip_ui32_t gc_alloc_since_last_gc;
+    catnip_ui32_t gc_alloc_threshold;
 };
 
 catnip_runtime *catnip_runtime_new();

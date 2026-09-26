@@ -72,6 +72,7 @@ catnip_obj_head *catnip_runtime_gc_new_obj(catnip_runtime *runtime, catnip_ui32_
   // All non-large objects need to be able to fit in a one heap page
   CATNIP_ASSERT(CATNIP_HEAP_LARGE_OBJ_SIZE < (CATNIP_HEAP_PAGE_SIZE_BYTES - sizeof(catnip_gc_page)));
 
+  runtime->gc_alloc_since_last_gc += size;
 
   catnip_obj_head *objHead;
 
@@ -220,6 +221,9 @@ void catnip_runtime_gc(catnip_runtime *runtime) {
   #ifndef CATNIP_GC_DISABLE
   CATNIP_ASSERT(runtime != CATNIP_NULL);
 
+  // Bytes of surviving objects, used to size the next collection threshold.
+  catnip_ui32_t liveBytes = 0;
+
   const catnip_ui32_t numberOfPages = CATNIP_LIST_LENGTH(&runtime->gc_pages, catnip_gc_page*);
 
   #ifdef CATNIP_GC_STATS
@@ -272,6 +276,8 @@ void catnip_runtime_gc(catnip_runtime *runtime) {
         const catnip_bool_t keep = currentObj->refcount != 0 || currentObj->extern_refcount != 0;
 
         if (keep) {
+          liveBytes += currentObjAlignedLen;
+
           // We need to find this page a new compacted spot.
 
           catnip_obj_head *nextRelocationPtr = ((void *) relocationPtr) + currentObjAlignedLen;
@@ -407,6 +413,17 @@ void catnip_runtime_gc(catnip_runtime *runtime) {
   // Set the page to the new spot we should start allocating stuff :))
   runtime->gc_page = relocationPage;
   runtime->gc_page_index = relocationPageIdx;
+
+  // Collect again once about as much garbage as the live set has piled up, so
+  // the heap stays within roughly twice the live size.
+  catnip_ui32_t nextThreshold = liveBytes;
+  if (nextThreshold < CATNIP_GC_MIN_ALLOC_BYTES)
+    nextThreshold = CATNIP_GC_MIN_ALLOC_BYTES;
+  else if (nextThreshold > CATNIP_GC_MAX_ALLOC_BYTES)
+    nextThreshold = CATNIP_GC_MAX_ALLOC_BYTES;
+
+  runtime->gc_alloc_threshold = nextThreshold;
+  runtime->gc_alloc_since_last_gc = 0;
 
   #ifdef CATNIP_GC_STATS
   runtime->gc_stats->num_pages = CATNIP_LIST_LENGTH(&runtime->gc_pages, catnip_gc_page *);
