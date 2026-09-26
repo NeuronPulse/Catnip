@@ -6,9 +6,17 @@ import { CatnipSprite, CatnipSpriteDesc, CatnipSpriteID } from "./CatnipSprite";
 import { CatnipEventID, CatnipEventListener } from "../CatnipEvents";
 import { CatnipCompilerConfig } from "../compiler/CatnipCompilerConfig";
 import { CatnipProjectModule } from "./CatnipProjectModule";
+import { SB3UnsupportedOpcode } from "../sb3_reader";
 
 export interface CatnipProjectDesc {
     sprites: CatnipSpriteDesc[];
+
+    /**
+     * Blocks the project uses that Catnip has no implementation for. They are
+     * dropped from the compiled module, so a host that cares about fidelity
+     * should tell the user which ones went missing.
+     */
+    unsupportedOpcodes: readonly SB3UnsupportedOpcode[];
 }
 
 interface EventInfo<TEventID extends CatnipEventID = CatnipEventID> {
@@ -21,6 +29,9 @@ export class CatnipProject {
     public readonly runtimeModule: CatnipRuntimeModule;
     public readonly runtimeInstance: WasmStructWrapper<typeof CatnipWasmStructRuntime>;
 
+    /** Blocks the project uses that Catnip cannot compile; see the desc. */
+    public readonly unsupportedOpcodes: readonly SB3UnsupportedOpcode[];
+
     private readonly _sprites: Map<CatnipSpriteID, CatnipSprite>;
     public get sprites(): IterableIterator<CatnipSprite> { return this._sprites.values(); }
 
@@ -30,6 +41,8 @@ export class CatnipProject {
     constructor(runtime: CatnipRuntimeModule, desc: CatnipProjectDesc) {
         this.runtimeModule = runtime;
         this.runtimeInstance = this.runtimeModule.createRuntimeInstance();
+
+        this.unsupportedOpcodes = desc.unsupportedOpcodes;
 
         this._sprites = new Map();
 

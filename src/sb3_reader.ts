@@ -39,8 +39,27 @@ export interface SB3ProcedureInfo {
     readonly args: readonly SB3ProcedureArgumentInfo[];
 }
 
+/** A block Catnip cannot compile, and how many times the project used it. */
+export interface SB3UnsupportedOpcode {
+    readonly opcode: string;
+    readonly count: number;
+}
+
 export class SB3ReadMetadata {
     public readonly config: SB3ReadConfig;
+
+    /**
+     * Blocks the project uses that Catnip has no implementation for, counted by
+     * opcode. A host can show these to the user instead of leaving them to
+     * notice that a script is missing.
+     */
+    private readonly _unsupportedOpcodes: Map<string, number>;
+
+    public get unsupportedOpcodes(): readonly SB3UnsupportedOpcode[] {
+        return [ ...this._unsupportedOpcodes ]
+            .map(([ opcode, count ]) => ({ opcode, count }))
+            .sort((a, b) => b.count - a.count);
+    }
 
     private _spriteCount: number;
     private _scriptCount: number;
@@ -56,6 +75,7 @@ export class SB3ReadMetadata {
 
     public constructor(config: SB3ReadConfig) {
         this.config = config;
+        this._unsupportedOpcodes = new Map();
         this._spriteCount = 0;
         this._scriptCount = 0;
         this._variableCount = 0;
@@ -125,6 +145,17 @@ export class SB3ReadMetadata {
     public assignScriptID(): CatnipScriptID {
         return (this._scriptCount++) + "";
     }
+
+    /**
+     * Records a block that Catnip cannot compile. The reader only reports when
+     * it is allowed to carry on without the block (see `allow_unknown_opcodes`);
+     * otherwise it throws.
+     */
+    public reportUnsupportedOpcode(opcode: string, reason: string): void {
+        SB3ReadLogger.warn(`${reason} ('${opcode}')`);
+
+        this._unsupportedOpcodes.set(opcode, (this._unsupportedOpcodes.get(opcode) ?? 0) + 1);
+    }
 }
 
 enum BlockType {
@@ -175,7 +206,7 @@ export class SB3ScriptReader {
         return this.meta.getList(listID);
     }
 
-    private _getBlockInfo<TOpcode extends ProjectSB3BlockOpcode>(opcode: TOpcode, expected: BlockType): { type: BlockType.HAT, deserializer: SB3HatBlockDeserializer<TOpcode> } |
+    private _getBlockInfo<TOpcode extends ProjectSB3BlockOpcode>(opcode: TOpcode, expected: BlockType): { type: BlockType.HAT, deserializer: SB3HatBlockDeserializer<TOpcode> | null } |
     { type: BlockType.COMMAND, deserializer: SB3CommandBlockDeserializer<TOpcode> } |
     { type: BlockType.INPUT, deserializer: SB3InputBlockDeserializer<TOpcode> } {
         const hatBlockDeserializer = sb3_ops.hatBlocks.get(opcode);
@@ -206,7 +237,7 @@ export class SB3ScriptReader {
         }
 
         if (this.meta.config.allow_unknown_opcodes) {
-            SB3ReadLogger.warn(`Unknown SB3 block opcode '${opcode}'.`);
+            this.meta.reportUnsupportedOpcode(opcode, "Unknown SB3 block opcode");
 
             switch (expected) {
                 case BlockType.COMMAND:
@@ -220,7 +251,13 @@ export class SB3ScriptReader {
                         deserializer: (ctx, block) => CatnipOps.core_const.create({ value: 0 })
                     }
                 case BlockType.HAT:
-                    throw new Error(`Unknown SB3 hat not supported ('${opcode}').`);
+                    // A script we cannot start is not a script: the stack under
+                    // it is unreachable, so dropping the whole script loses
+                    // nothing that a placeholder could stand in for.
+                    return {
+                        type: BlockType.HAT,
+                        deserializer: null
+                    };
 
             }
         } else {
@@ -245,6 +282,7 @@ export class SB3ScriptReader {
             const hatBlockInfo = this._getBlockInfo(hatBlock.opcode, BlockType.HAT);
 
             if (hatBlockInfo.type !== BlockType.HAT) continue;
+            if (hatBlockInfo.deserializer === null) continue;
 
             const trigger = hatBlockInfo.deserializer(this, hatBlock);
 
@@ -287,7 +325,7 @@ export class SB3ScriptReader {
             }
             case ProjectSB3InputValueType.LIST:
                 if (this.meta.config.allow_unknown_opcodes) {
-                    SB3ReadLogger.warn("Unsupported list reporter.");
+                    this.meta.reportUnsupportedOpcode("<list reporter>", "Unsupported list reporter");
                     return CatnipOps.core_const.create({ value: "" });
                 }
                 throw new Error("Not supported.");
@@ -477,6 +515,7 @@ export function readSB3(sb3: ProjectSB3, partialConfig?: Partial<SB3ReadConfig>)
 
     console.timeEnd("SB3 Parse");
     return {
-        sprites: spritesDesc
+        sprites: spritesDesc,
+        unsupportedOpcodes: meta.unsupportedOpcodes
     };
 }
