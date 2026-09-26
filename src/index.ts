@@ -8,6 +8,28 @@ import { createLogger } from "./log";
 
 const logger = createLogger("Catnip");
 
+/**
+ * Finds the project's JSON in the zip. Projects saved by some tools (and
+ * Scratch's own fixtures) keep their contents in a folder inside the zip
+ * rather than at its root, and the macOS resource forks some zips carry along
+ * have files that end in `project.json` too.
+ */
+function findProjectJSON(zip: JSZip): JSZip.JSZipObject | null {
+    let found: string | null = null;
+
+    for (const path in zip.files) {
+        if (zip.files[path].dir) continue;
+        if (!path.endsWith("project.json")) continue;
+        if (path.includes("__MACOSX/")) continue;
+        if (path.split("/").pop()!.startsWith("._")) continue;
+
+        // The shallowest match is the project; anything deeper is a copy.
+        if (found === null || path.length < found.length) found = path;
+    }
+
+    return found === null ? null : zip.files[found];
+}
+
 export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, renderer?: ICatnipRenderer): Promise<CatnipProject> {
 
     // Reading the project and creating the runtime are independent, and neither
@@ -19,7 +41,10 @@ export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, 
 
     const myzip = await jszip.loadAsync(file);
 
-    const projectFile = myzip.file("project.json")!;
+    const projectFile = findProjectJSON(myzip);
+
+    if (projectFile === null)
+        throw new Error("The project file does not contain a project.json.");
 
     // JSZip decodes utf8 in JavaScript, which on a project with a hundred
     // megabytes of JSON costs several times what TextDecoder does natively.
