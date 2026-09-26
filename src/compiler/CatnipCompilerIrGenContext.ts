@@ -19,6 +19,7 @@ import { ir_external_callback_input } from "./ir/core/external_callback_input";
 import { CatnipCompilerValue } from "./CatnipCompilerValue";
 import { CatnipValueFormatUtils } from './CatnipValueFormatUtils';
 import { ir_const } from "./ir/core/const";
+import { ir_warp_expired } from "./ir/core/warp_expired";
 import { catnip_compiler_constant } from "./cast";
 
 export class CatnipCompilerIrGenContext {
@@ -389,7 +390,15 @@ export class CatnipCompilerIrGenContext {
         if (!this.isWarp) {
             this.emitYield();
         } else if (this.compiler.config.enable_warp_timer) {
-            // TODO Warp timer
+            // A warp thread runs its loops without giving other threads a turn
+            // (scratch-vm bounds this with Sequencer.WARP_TIME). Checking the
+            // tick's deadline at the loop boundary instead keeps a runaway warp
+            // loop from stalling the runtime: the thread yields and is resumed on
+            // the next tick, where catnip_runtime_tick hands it a fresh deadline.
+            // The branch emitter resolves the yield back into the fall-through
+            // path, so the loop simply continues when there is time left.
+            this.emitIr(ir_warp_expired, {}, {});
+            this.emitConditionalJump(this.ir.createFunction().body, CatnipWasmEnumThreadStatus.YIELD);
         }
     }
 

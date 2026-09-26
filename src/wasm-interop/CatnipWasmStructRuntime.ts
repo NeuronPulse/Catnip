@@ -4,7 +4,7 @@ import { CatnipWasmStructRandomState } from "./CatnipWasmStructRandomState";
 import { CatnipWasmPtrRuntimeGcStats } from "./CatnipWasmStructRuntimeGcStats";
 import { CatnipWasmPtrSprite } from "./CatnipWasmStructSprite";
 import { CatnipWasmPtrTarget } from "./CatnipWasmStructTarget";
-import { WasmArray, WasmBool32, WasmInt32, WasmPtr, WasmPtrVoid, WasmStruct, WasmUInt32, WasmUInt64 } from "./wasm-types";
+import { WasmArray, WasmBool32, WasmFloat64, WasmInt32, WasmPtr, WasmPtrVoid, WasmStruct, WasmUInt32, WasmUInt64 } from "./wasm-types";
 
 export const CatnipWasmStructRuntime = new WasmStruct("catnip_runtime", {
 
@@ -34,4 +34,6 @@ export const CatnipWasmStructRuntime = new WasmStruct("catnip_runtime", {
 
     time: WasmUInt64,
     timer_start: WasmUInt64,
+
+    tick_deadline: WasmFloat64,
 });

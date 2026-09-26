@@ -88,10 +88,15 @@ struct catnip_runtime {
     
     catnip_ui64_t time;
     catnip_ui64_t timer_start;
+
+    /* Monotonic time (see catnip_import_perf_time) by which the current tick must
+     * stop stepping threads. Warp loops check this to decide if they should yield. */
+    catnip_f64_t tick_deadline;
 };
 
 catnip_runtime *catnip_runtime_new();
 void catnip_runtime_tick(catnip_runtime *runtime);
+catnip_bool_t catnip_runtime_warp_expired(catnip_runtime *runtime);
 void catnip_runtime_start_threads(catnip_runtime *runtime, catnip_sprite *sprite, catnip_thread_fnptr entrypoint, catnip_list *threadList);
 catnip_obj_head *catnip_runtime_gc_new_obj(catnip_runtime *runtime, catnip_ui32_t size);
 catnip_obj_head *catnip_gc_new_immortal(catnip_ui32_t size);

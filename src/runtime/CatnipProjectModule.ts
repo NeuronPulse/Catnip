@@ -1,7 +1,7 @@
 import { CatnipEventArgs, CatnipEventID, CatnipEventListener, CatnipEvents, CatnipEventValueTypeInfo, CatnipEventValueTypes } from "../CatnipEvents";
 import { createLogger, Logger } from "../log";
 import { CatnipProject } from "../runtime/CatnipProject";
-import { CatnipRuntimeModule } from "../runtime/CatnipRuntimeModule";
+import { CATNIP_DEFAULT_STEP_RATE, CatnipRuntimeModule, catnipTickBudgetMs } from "../runtime/CatnipRuntimeModule";
 import { CatnipWasmStructRuntime } from "../wasm-interop/CatnipWasmStructRuntime";
 import { WasmStructValue, WasmStructWrapper } from "../wasm-interop/wasm-types";
 import { CatnipRuntimeGcStats, CatnipWasmStructRuntimeGcStats } from '../wasm-interop/CatnipWasmStructRuntimeGcStats';
@@ -18,6 +18,8 @@ export class CatnipProjectModule {
 
     public readonly instance: WebAssembly.Instance;
     private _events: Map<CatnipEventID, CatnipEventListener> = new Map();
+
+    private _stepRate: number;
     
     /** @internal */
     constructor(project: CatnipProject, instance: WebAssembly.Instance, events: CatnipProjectModuleEvent[]) {
@@ -25,6 +27,7 @@ export class CatnipProjectModule {
         this.instance = instance;
         this.runtimeModule = project.runtimeModule;
         this.runtimeInstance = project.runtimeInstance;
+        this._stepRate = CATNIP_DEFAULT_STEP_RATE;
 
         this._events = new Map();
         for (const event of events) {
@@ -59,6 +62,25 @@ export class CatnipProjectModule {
 
     public start(): void {
         this.triggerEvent("PROJECT_START");
+    }
+
+    /** Simulation steps (frames) per second. Rendering is independent of this. */
+    public get stepRate(): number {
+        return this._stepRate;
+    }
+
+    /**
+     * Changes the simulation step rate at runtime. The per-step work budget
+     * follows scratch-vm: 75% of the step interval (sequencer WORK_TIME).
+     * The renderer keeps drawing on its own frame loop, so this only affects
+     * how fast the simulation advances.
+     */
+    public setStepRate(stepRateHz: number): void {
+        if (!Number.isFinite(stepRateHz) || stepRateHz <= 0)
+            throw new Error(`Invalid step rate '${stepRateHz}'`);
+
+        this._stepRate = stepRateHz;
+        this.runtimeInstance.setMember("cfg_tick_time", catnipTickBudgetMs(stepRateHz));
     }
 
     public step(): void {

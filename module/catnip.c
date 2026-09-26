@@ -33,6 +33,10 @@ void CATNIP_EXPORT(catnip_runtime_tick)(catnip_runtime *runtime) {
   catnip_runtime_tick(runtime);
 }
 
+catnip_bool_t CATNIP_EXPORT(catnip_runtime_warp_expired)(catnip_runtime *runtime) {
+  return catnip_runtime_warp_expired(runtime);
+}
+
 void CATNIP_EXPORT(catnip_runtime_start_threads)(catnip_runtime *runtime, catnip_sprite *sprite, catnip_thread_fnptr entrypoint, catnip_list *threadList) {
   return catnip_runtime_start_threads(runtime, sprite, entrypoint, threadList);
 }

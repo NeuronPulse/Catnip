@@ -16,6 +16,18 @@ import { CatnipCompilerLogger } from "../compiler/CatnipCompilerLogger";
  * A wrapper for the catnip wasm runtime
  */
 
+/** Simulation steps (frames) per second, mirroring scratch-vm's compatibility rate. */
+export const CATNIP_DEFAULT_STEP_RATE = 30;
+
+/**
+ * Per-step work budget in milliseconds for a given step rate.
+ * scratch-vm runs threads for 75% of the step interval
+ * (see scratch-vm/src/engine/sequencer.js, WORK_TIME).
+ */
+export function catnipTickBudgetMs(stepRateHz: number): number {
+    return Math.max(1, Math.round((1000 / stepRateHz) * 0.75));
+}
+
 export class CatnipRuntimeModule {
 
     public static async create(module: WebAssembly.Module, renderer: ICatnipRenderer): Promise<CatnipRuntimeModule> {
@@ -37,6 +49,7 @@ export class CatnipRuntimeModule {
                     return runtimeModule.createCanonHString(str);
                 },
                 catnip_import_time: () => BigInt(Date.now()),
+                catnip_import_perf_time: () => performance.now(),
             },
 
             env: {
@@ -167,9 +180,9 @@ export class CatnipRuntimeModule {
         const runtimeState = runtime.getMemberWrapper("random_state").getInnerWrapper();
 
         runtimeState.setMember("state0", rngState[0]);
-        runtimeState.setMember("state0", rngState[1]);
+        runtimeState.setMember("state1", rngState[1]);
 
-        runtime.setMember("cfg_tick_time", 250);
+        runtime.setMember("cfg_tick_time", catnipTickBudgetMs(CATNIP_DEFAULT_STEP_RATE));
         runtime.setMember("cfg_turbomode", false);
 
         return runtime;

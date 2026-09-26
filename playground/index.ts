@@ -5,6 +5,7 @@ type WorkerMessage =
     | { kind: "penLines", data: Float32Array, length: number }
     | { kind: "penErase" }
     | { kind: "frame" }
+    | { kind: "stepRate", hz: number }
     | { kind: "ready" }
     | { kind: "error", message: string };
 
@@ -73,6 +74,9 @@ async function main() {
             case "frame":
                 drawPending = true;
                 break;
+            case "stepRate":
+                console.info(`[catnip] step rate: ${message.hz}Hz`);
+                break;
             case "ready":
                 attachInput();
                 console.info("[catnip] worker ready");
@@ -90,6 +94,8 @@ async function main() {
     // The project module lives in the worker, expose a proxy for console fiddling.
     (globalThis as any).project = {
         triggerEvent: (id: string, ...args: number[]) => worker.postMessage({ kind: "event", id, args }),
+        /** Simulation steps per second. Rendering runs on rAF at its own rate. */
+        setStepRate: (hz: number) => worker.postMessage({ kind: "stepRate", hz }),
     };
 }
 

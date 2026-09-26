@@ -49,15 +49,20 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
 
   update_time(runtime);
 
-  catnip_ui64_t tickStartTime = runtime->time;
+  // The budget is spent between thread passes, so generated warp loops also
+  // check this deadline: a warp loop that would otherwise run for seconds in one
+  // go yields once the tick is out of time, and is resumed on the next tick.
+  catnip_f64_t tickStartTime = catnip_import_perf_time();
+  runtime->tick_deadline = tickStartTime + (catnip_f64_t) runtime->cfg_tick_time;
+
   catnip_bool_t ranFirstTick = CATNIP_FALSE;
 
   runtime->redraw_requested = CATNIP_FALSE;
   runtime->num_active_threads = CATNIP_LIST_LENGTH(&runtime->threads, catnip_thread *);
-  
+
   while ((runtime->num_active_threads != 0) &&
-        (!runtime->redraw_requested || runtime->cfg_turbomode) && 
-        ((catnip_import_time() - tickStartTime) < runtime->cfg_tick_time)) {
+        (!runtime->redraw_requested || runtime->cfg_turbomode) &&
+        (catnip_import_perf_time() < runtime->tick_deadline)) {
 
     runtime->num_active_threads = 0;
 
@@ -80,15 +85,25 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
 
         if (++lc > 100000000)
           CATNIP_ASSERT(CATNIP_FALSE);
+
+        // Checked after every call rather than only between passes: the clock
+        // read can't be optimized out (it's an import), so a thread that never
+        // yields still gives the tick back in bounded time.
+        if (catnip_import_perf_time() >= runtime->tick_deadline)
+          break;
       }
 
-      if (thread->status != CATNIP_THREAD_STATUS_TERMINATED) 
+      if (thread->status != CATNIP_THREAD_STATUS_TERMINATED)
         ++runtime->num_active_threads;
     }
 
     ranFirstTick = CATNIP_TRUE;
     catnip_runtime_gc(runtime);
   }
+}
+
+catnip_bool_t catnip_runtime_warp_expired(catnip_runtime *runtime) {
+  return catnip_import_perf_time() >= runtime->tick_deadline;
 }
 
 void catnip_runtime_start_threads(catnip_runtime *runtime, catnip_sprite *sprite, catnip_thread_fnptr entrypoint, catnip_list *threadList) {

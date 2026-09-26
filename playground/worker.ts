@@ -1,11 +1,13 @@
 
 import { run } from "../src/index";
 import { ICatnipRenderer } from "../src/runtime/ICatnipRenderer";
+import { CATNIP_DEFAULT_STEP_RATE } from "../src/runtime/CatnipRuntimeModule";
 
 type ToMainMessage =
     | { kind: "penLines", data: Float32Array, length: number }
     | { kind: "penErase" }
     | { kind: "frame" }
+    | { kind: "stepRate", hz: number }
     | { kind: "ready" }
     | { kind: "error", message: string };
 
@@ -14,6 +16,7 @@ type FromMainMessage =
     | { kind: "mouseMove", x: number, y: number }
     | { kind: "mouseDown" }
     | { kind: "mouseUp" }
+    | { kind: "stepRate", hz: number }
     | { kind: "event", id: string, args: number[] };
 
 // `self` is typed as Window by the DOM lib, so narrow it to a worker scope manually.
@@ -71,6 +74,9 @@ async function main() {
             case "mouseUp":
                 projectModule.triggerEvent("IO_MOUSE_UP");
                 break;
+            case "stepRate":
+                setStepRate(message.hz);
+                break;
             case "event":
                 projectModule.triggerEvent(message.id as any, ...message.args);
                 break;
@@ -79,8 +85,16 @@ async function main() {
 
     (self as any).project = projectModule;
 
-    const stepRate = 30;
     let intervalToken: any;
+
+    // The simulation steps on its own timer; the main thread renders on rAF and
+    // only redraws when the worker reports a new frame.
+    function setStepRate(hz: number) {
+        projectModule.setStepRate(hz);
+        if (intervalToken !== undefined) clearInterval(intervalToken);
+        intervalToken = setInterval(frame, 1000 / hz);
+        workerScope.postMessage({ kind: "stepRate", hz });
+    }
 
     // Rolling window of frame durations (step + frame) for the periodic report.
     const stepSamples: number[] = [];
@@ -98,7 +112,7 @@ async function main() {
         const sorted = [...stepSamples].sort((a, b) => a - b);
         const at = (p: number) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))].toFixed(1);
         const avg = sorted.reduce((a, b) => a + b, 0) / sorted.length;
-        console.log(`[step] n=${sorted.length} p50=${at(0.5)}ms p95=${at(0.95)}ms max=${at(1)}ms avg=${avg.toFixed(1)}ms`);
+        console.log(`[step] rate=${projectModule.stepRate}Hz n=${sorted.length} p50=${at(0.5)}ms p95=${at(0.95)}ms max=${at(1)}ms avg=${avg.toFixed(1)}ms`);
         try {
             console.log(`[gc] ${JSON.stringify(projectModule.getGcStats())}`);
         } catch { /* gc stats unavailable */ }
@@ -120,7 +134,7 @@ async function main() {
 
     projectModule.start();
 
-    intervalToken = setInterval(frame, 1000 / stepRate);
+    setStepRate(CATNIP_DEFAULT_STEP_RATE);
 
     workerScope.postMessage({ kind: "ready" });
 }

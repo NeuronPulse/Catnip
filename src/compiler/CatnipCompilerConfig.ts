@@ -26,7 +26,7 @@ export function catnipCompilerConfigCreateDefault(): CatnipCompilerConfig {
         enable_optimization_variable_inlining: true,
         enable_optimization_variable_inlining_force: false,
         enable_optimization_type_analysis: true,
-        enable_warp_timer: false,
+        enable_warp_timer: true,
     } as CatnipCompilerConfig;
 
     
