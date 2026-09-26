@@ -4,6 +4,8 @@ package-lock.json
 .vscode
 bundle.js
 bundle.js.map
+worker.js
+worker.js.map
 *.wasm
 .fuse_hidden*
 .tap

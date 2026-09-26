@@ -1,76 +1,96 @@
 
-import { run } from "../src/index";
 import { CatnipRenderer } from "../renderer";
 
+type WorkerMessage =
+    | { kind: "penLines", data: Float32Array, length: number }
+    | { kind: "penErase" }
+    | { kind: "frame" }
+    | { kind: "ready" }
+    | { kind: "error", message: string };
+
 async function main() {
-    const moduleRequest = await fetch('catnip.wasm');
-    // const sb3File = await (await fetch('Project.sb3')).arrayBuffer();
-    // const sb3File = await (await fetch('Variable inlining bug.sb3')).arrayBuffer();
-    // const sb3File = await (await fetch('Conway.sb3')).arrayBuffer();
-    // const sb3File = await (await fetch('Mandlebrot Set Benchmark.sb3')).arrayBuffer();
-    // const sb3File = await (await fetch('lines.sb3')).arrayBuffer();
-    // const sb3File = await (await fetch('fib.sb3')).arrayBuffer();
-    const sb3File = await (await fetch('LOS.sb3')).arrayBuffer();
-    const module = await WebAssembly.compileStreaming(moduleRequest);
-
     const renderer = new CatnipRenderer();
+    const worker = new Worker("worker.js");
 
-    const project = await run(module, sb3File, renderer);
-    const projectModule = await project.compile({
-        // enable_optimization_binaryen: false,
-        enable_optimization_variable_inlining: false,
-    });
+    let drawPending = false;
 
-    document.addEventListener("keydown", (event) => {
-        projectModule.triggerEvent("IO_KEY_PRESSED", event.keyCode);
-    });
-
-    document.addEventListener("keyup", (event) => {
-        projectModule.triggerEvent("IO_KEY_RELEASED", event.keyCode);
-    });
-
-    document.addEventListener("mousemove", (event) => {
-        const canvasElement = renderer.canvasElement;
-        const rect = canvasElement.getBoundingClientRect();
-
-        const mouseX = (event.clientX - rect.left) / canvasElement.width;
-        const mouseY = (event.clientY - rect.top) / canvasElement.height;
-
-        const centeredX = mouseX - 0.5;
-        const centeredY = mouseY - 0.5;
-
-        projectModule.triggerEvent("IO_MOUSE_MOVE", centeredX * 480, -centeredY * 360);
-    });
-
-    document.addEventListener("mouseup", (event) => {
-        projectModule.triggerEvent("IO_MOUSE_UP");
-    });
-
-    document.addEventListener("mousedown", (event) => {
-        projectModule.triggerEvent("IO_MOUSE_DOWN");
-    });
-
-    (window as any).project = projectModule;
-
-    let intervalToken: any;
-
-    const stepRate = 30;
-
-    function frame() {
-
-        try {
-            projectModule.step();
-            projectModule.frame();
-        } catch (e) {
-            console.error("Error while stepping project.")
-            console.error(e);
-            clearInterval(intervalToken);
+    function draw() {
+        if (drawPending) {
+            drawPending = false;
+            try {
+                renderer.frame();
+            } catch (e) {
+                console.error("Error while drawing frame.");
+                console.error(e);
+            }
         }
+        requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+
+    function attachInput() {
+        document.addEventListener("keydown", (event) => {
+            worker.postMessage({ kind: "key", down: true, keyCode: event.keyCode });
+        });
+
+        document.addEventListener("keyup", (event) => {
+            worker.postMessage({ kind: "key", down: false, keyCode: event.keyCode });
+        });
+
+        document.addEventListener("mousemove", (event) => {
+            const canvasElement = renderer.canvasElement;
+            const rect = canvasElement.getBoundingClientRect();
+
+            const mouseX = (event.clientX - rect.left) / canvasElement.width;
+            const mouseY = (event.clientY - rect.top) / canvasElement.height;
+
+            const centeredX = mouseX - 0.5;
+            const centeredY = mouseY - 0.5;
+
+            worker.postMessage({ kind: "mouseMove", x: centeredX * 480, y: -centeredY * 360 });
+        });
+
+        document.addEventListener("mouseup", () => {
+            worker.postMessage({ kind: "mouseUp" });
+        });
+
+        document.addEventListener("mousedown", () => {
+            worker.postMessage({ kind: "mouseDown" });
+        });
     }
 
-    projectModule.start();
+    worker.addEventListener("message", (event: MessageEvent<WorkerMessage>) => {
+        const message = event.data;
+        switch (message.kind) {
+            case "penLines":
+                renderer.penDrawLines(message.data, message.length);
+                drawPending = true;
+                break;
+            case "penErase":
+                renderer.penEraseAll();
+                drawPending = true;
+                break;
+            case "frame":
+                drawPending = true;
+                break;
+            case "ready":
+                attachInput();
+                console.info("[catnip] worker ready");
+                break;
+            case "error":
+                console.error("[catnip worker]", message.message);
+                break;
+        }
+    });
 
-    intervalToken = setInterval(frame, 1000 / stepRate);
+    worker.addEventListener("error", (event) => {
+        console.error("[catnip worker]", event.message);
+    });
+
+    // The project module lives in the worker, expose a proxy for console fiddling.
+    (globalThis as any).project = {
+        triggerEvent: (id: string, ...args: number[]) => worker.postMessage({ kind: "event", id, args }),
+    };
 }
 
 (globalThis as any).main = main;

@@ -59,4 +59,46 @@ export default [
         ]
     },
 
+    {
+        // Simulation runs off the main thread: only the WebGL renderer stays in the page.
+        input: 'playground/worker.ts',
+
+        output: {
+            sourcemap: !production,
+            format: 'iife',
+            file: 'public/worker.js',
+        },
+
+        plugins: [
+            typescript(
+                {
+                    tsconfig: "tsconfig.json",
+                    sourceMap: !production,
+                    inlineSources: !production,
+                }
+            ),
+
+            // binaryen's emscripten glue reads import.meta.url; rollup's default
+            // iife rewrite of it uses document.baseURI, which does not exist in a
+            // worker. self.location.href is the worker script URL and equivalent.
+            {
+                name: 'worker-import-meta-url',
+                resolveImportMeta(property) {
+                    if (property === 'url')
+                        return 'self.location.href';
+                    return null;
+                },
+            },
+
+            nodeResolve({
+                browser: true
+            }),
+            commonjs(),
+
+            tla(),
+
+            production && terser({ mangle: false }),
+        ]
+    },
+
 ];
