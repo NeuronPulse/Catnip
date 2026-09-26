@@ -286,19 +286,29 @@ export class CatnipCompiler {
         this._startTiming("spider_write");
         let moduleSource = writeModule(this.spiderModule, { mergeTypes: false });
 
-        if (this.config.enable_optimization_binaryen || this.config.dump_binaryen) {
-            this._startTiming("binaryen");
+        const binaryenOptimizeLevel = typeof (this.config.enable_optimization_binaryen) === "number" ?
+            this.config.enable_optimization_binaryen :
+            (this.config.enable_optimization_binaryen ?
+                catnipBinaryenOptimizeLevelForSize(moduleSource.byteLength) : null);
+
+        if (this.config.enable_optimization_binaryen) {
+            CatnipCompilerLogger.log(binaryenOptimizeLevel === null ?
+                `binaryen: ${(moduleSource.byteLength / 1024).toFixed(0)}KiB module, too large to optimize, skipping` :
+                `binaryen: ${(moduleSource.byteLength / 1024).toFixed(0)}KiB module, optimize level ${binaryenOptimizeLevel}`);
+        }
+
+        if (binaryenOptimizeLevel !== null || this.config.dump_binaryen) {
+            // Reading, optimizing and emitting are timed apart: on a large
+            // project binaryen is most of the compile, and it is worth knowing
+            // which of the three is paying for it.
+            this._startTiming("binaryen_read");
             const binaryenModule = binaryen.readBinary(moduleSource);
 
-            if (this.config.enable_optimization_binaryen) {
-                const optLevel = typeof (this.config.enable_optimization_binaryen) === "number" ?
-                    this.config.enable_optimization_binaryen :
-                    catnipBinaryenOptimizeLevelForSize(moduleSource.byteLength);
-
-                CatnipCompilerLogger.log(`binaryen: ${(moduleSource.byteLength / 1024).toFixed(0)}KiB module, optimize level ${optLevel}`);
-
-                binaryen.setOptimizeLevel(optLevel);
+            if (binaryenOptimizeLevel !== null) {
+                binaryen.setOptimizeLevel(binaryenOptimizeLevel);
+                this._startTiming("binaryen_optimize");
                 binaryenModule.optimize();
+                this._startTiming("binaryen_emit");
                 moduleSource = binaryenModule.emitBinary();
             }
 
