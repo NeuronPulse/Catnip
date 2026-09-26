@@ -29,6 +29,10 @@ async function main() {
 
             let didPlan = false;
             let didEnd = false;
+            // A project that stops its own threads ("stop all") has nothing
+            // left to say "end" with, so it says this instead and the run ends
+            // when the last thread does.
+            let expectStopped = false;
 
             registerSB3CommandBlock("looks_say", (ctx, block) =>
                 op_callback_command.create({
@@ -59,6 +63,9 @@ async function main() {
                                 // ??
                                 t.end();
                                 break;
+                            case "expectstop":
+                                expectStopped = true;
+                                break;
                             case "comment":
                                 t.comment(message);
                                 break;
@@ -85,6 +92,8 @@ async function main() {
             } while (!didEnd && projectModule.hasRunningThreads());
 
             if (!didEnd) {
+                if (expectStopped && !projectModule.hasRunningThreads()) return;
+
                 t.fail("Test did not end.");
                 t.end();
                 return;

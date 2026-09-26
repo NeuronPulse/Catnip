@@ -52,6 +52,10 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
     catnip_thread_terminate: fn<[thread: SpiderNumberType.i32], undefined>
         ([SpiderNumberType.i32], undefined),
+    catnip_thread_stop_all: fn<[thread: SpiderNumberType.i32], undefined>
+        ([SpiderNumberType.i32], undefined),
+    catnip_thread_stop_other_scripts: fn<[thread: SpiderNumberType.i32], undefined>
+        ([SpiderNumberType.i32], undefined),
     catnip_thread_resize_stack: fn<[thread: SpiderNumberType.i32, extraCapacity: SpiderNumberType.i32], undefined>
         ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
 

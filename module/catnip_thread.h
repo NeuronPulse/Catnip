@@ -37,6 +37,12 @@ struct catnip_thread {
 catnip_thread *catnip_thread_new(catnip_target *target, catnip_thread_fnptr entrypoint);
 void catnip_thread_yield(catnip_thread *thread, catnip_thread_fnptr dst);
 void catnip_thread_terminate(catnip_thread *thread);
+/* Stops every thread, including the one that asked. The caller must return
+   from its entry point right away: the runtime will not call it again. */
+void catnip_thread_stop_all(catnip_thread *thread);
+/* Stops every other thread running on the caller's target. The caller keeps
+   running. */
+void catnip_thread_stop_other_scripts(catnip_thread *thread);
 void catnip_thread_ref(catnip_thread *thread);
 void catnip_thread_unref(catnip_thread *thread);
 void catnip_thread_free_stack(catnip_thread *thread);

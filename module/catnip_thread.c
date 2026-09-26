@@ -73,6 +73,40 @@ void catnip_thread_terminate(catnip_thread *thread) {
   thread->status = CATNIP_THREAD_STATUS_TERMINATED;
 }
 
+// Terminates every other thread the runtime is running. Terminating a thread
+// is what a thread does to itself when it runs off the end of its script, so
+// everything that follows from a thread finishing (the waiters on a broadcast
+// and wait are unref'd when the thread is swept) follows from this too.
+static void catnip_thread_terminate_other_threads(catnip_thread *thread, catnip_bool_t same_target_only) {
+  catnip_runtime *runtime = thread->runtime;
+  catnip_i32_t numThreads = CATNIP_LIST_LENGTH(&runtime->threads, catnip_thread *);
+
+  for (catnip_i32_t i = 0; i < numThreads; ++i) {
+    catnip_thread *other = CATNIP_LIST_GET(&runtime->threads, catnip_thread *, i);
+
+    if (other == thread) continue;
+    if (same_target_only && other->target != thread->target) continue;
+
+    catnip_thread_terminate(other);
+  }
+}
+
+void catnip_thread_stop_all(catnip_thread *thread) {
+  CATNIP_ASSERT(thread != CATNIP_NULL);
+
+  catnip_thread_terminate_other_threads(thread, CATNIP_FALSE);
+
+  // The caller goes last: it still has a frame on the stack that has to return
+  // to the runtime before its stack can be freed.
+  catnip_thread_terminate(thread);
+}
+
+void catnip_thread_stop_other_scripts(catnip_thread *thread) {
+  CATNIP_ASSERT(thread != CATNIP_NULL);
+
+  catnip_thread_terminate_other_threads(thread, CATNIP_TRUE);
+}
+
 void *catnip_thread_allocate_stack(catnip_thread *thread, catnip_ui32_t capacity) {
   catnip_value *newStackPtr = ((void *) thread->stack_ptr) + capacity;
 

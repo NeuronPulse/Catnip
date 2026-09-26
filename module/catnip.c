@@ -75,6 +75,14 @@ void CATNIP_EXPORT(catnip_thread_terminate)(catnip_thread *thread) {
   return catnip_thread_terminate(thread);
 }
 
+void CATNIP_EXPORT(catnip_thread_stop_all)(catnip_thread *thread) {
+  return catnip_thread_stop_all(thread);
+}
+
+void CATNIP_EXPORT(catnip_thread_stop_other_scripts)(catnip_thread *thread) {
+  return catnip_thread_stop_other_scripts(thread);
+}
+
 
 void CATNIP_EXPORT(catnip_blockutil_debug_log)(catnip_hstring *str) {
   catnip_blockutil_debug_log(str);
