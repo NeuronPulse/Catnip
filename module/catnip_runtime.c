@@ -106,6 +106,32 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
 
     ranFirstTick = CATNIP_TRUE;
 
+    // Drop the threads that terminated in that pass, keeping the list in start
+    // order. The list is the GC's root set and every pass of every tick walks
+    // it, so a project that starts a script every frame would otherwise pay,
+    // forever, for every thread it has ever started. The stacks go with the
+    // threads; the structs stay while a wait list still points at one
+    // (see catnip_thread_unref).
+    catnip_i32_t numThreads = CATNIP_LIST_LENGTH(&runtime->threads, catnip_thread *);
+    catnip_i32_t numLiveThreads = 0;
+
+    for (catnip_i32_t i = 0; i < numThreads; ++i) {
+      catnip_thread *thread = CATNIP_LIST_GET(&runtime->threads, catnip_thread *, i);
+
+      if (thread->status == CATNIP_THREAD_STATUS_TERMINATED) {
+        catnip_thread_free_stack(thread);
+        catnip_thread_unref(thread);
+        continue;
+      }
+
+      if (numLiveThreads != i)
+        *CATNIP_LIST_GET_PTR_DANGER(&runtime->threads, catnip_thread *, numLiveThreads) = thread;
+
+      ++numLiveThreads;
+    }
+
+    CATNIP_LIST_SET_LENGTH(&runtime->threads, numLiveThreads);
+
     // Collecting on every pass over the threads means walking the whole heap
     // many times per tick, even when almost nothing has been allocated since
     // the last collection. Wait for enough new garbage to pile up instead.
@@ -136,8 +162,10 @@ void catnip_runtime_start_threads(catnip_runtime *runtime, catnip_sprite *sprite
 
     catnip_thread *newThread = catnip_thread_new(target, entrypoint);
 
-    if (threadList != CATNIP_NULL)
+    if (threadList != CATNIP_NULL) {
       CATNIP_LIST_ADD(threadList, catnip_thread*, newThread);
+      catnip_thread_ref(newThread);
+    }
 
     target = target->next_sprite;
   }

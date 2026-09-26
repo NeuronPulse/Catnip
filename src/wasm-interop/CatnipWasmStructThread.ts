@@ -12,6 +12,8 @@ export const CatnipWasmStructThread = new WasmStruct("catnip_thread", {
     stack_end: WasmPtrVoid,
     stack_start: WasmPtrVoid,
 
+    ref_count: WasmUInt32,
+
 });
 
 export const CatnipWasmPtrThread = new WasmPtr(CatnipWasmStructThread);

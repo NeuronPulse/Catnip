@@ -45,8 +45,10 @@ catnip_target *catnip_target_new(struct catnip_runtime *runtime, catnip_sprite *
 void catnip_target_start_new_thread(catnip_target *target, catnip_thread_fnptr entrypoint, catnip_list *threadList) {
   catnip_thread *newThread = catnip_thread_new(target, entrypoint);
 
-  if (threadList != CATNIP_NULL)
+  if (threadList != CATNIP_NULL) {
     CATNIP_LIST_ADD(threadList, catnip_thread *, newThread);
+    catnip_thread_ref(newThread);
+  }
 
   target = target->next_sprite;
 }

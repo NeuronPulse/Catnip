@@ -22,6 +22,13 @@ catnip_thread_status catnip_blockutil_wait_for_threads(catnip_list *threadList) 
   }
 
   if (!anyRunning) {
+    // The list held a reference to each thread it started, so that a thread
+    // swept from the runtime's list after it terminated is still there to be
+    // polled. Dropping the list drops those references.
+    for (catnip_ui32_t i = 0; i < CATNIP_LIST_LENGTH(threadList, catnip_thread *); i++) {
+      catnip_thread_unref(CATNIP_LIST_GET(threadList, catnip_thread *, i));
+    }
+
     CATNIP_LIST_FREE(threadList, catnip_thread *);
     return CATNIP_THREAD_STATUS_RUNNING;
   }

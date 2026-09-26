@@ -18,9 +18,46 @@ catnip_thread *catnip_thread_new(catnip_target *target, catnip_thread_fnptr entr
   thread->stack_ptr = thread->stack_start;
   thread->stack_end = thread->stack_start + INITIAL_STACK_SIZE;
 
+  thread->ref_count = 1;
+
   CATNIP_LIST_ADD(&thread->runtime->threads, catnip_thread *, thread);
 
   return thread;
+}
+
+void catnip_thread_ref(catnip_thread *thread) {
+  CATNIP_ASSERT(thread != CATNIP_NULL);
+
+  ++thread->ref_count;
+}
+
+void catnip_thread_unref(catnip_thread *thread) {
+  CATNIP_ASSERT(thread != CATNIP_NULL);
+  CATNIP_ASSERT(thread->ref_count != 0);
+
+  if (--thread->ref_count != 0)
+    return;
+
+  // The stack was freed when the thread was swept, if it ever got that far.
+  catnip_thread_free_stack(thread);
+
+  catnip_mem_free(thread);
+}
+
+void catnip_thread_free_stack(catnip_thread *thread) {
+  CATNIP_ASSERT(thread != CATNIP_NULL);
+
+  if (thread->stack_start == CATNIP_NULL)
+    return;
+
+  catnip_mem_free(thread->stack_start);
+
+  // Nulled rather than left dangling: the garbage collector walks the stacks of
+  // the threads it finds, and a terminated thread's stack is no longer a root
+  // set — nothing can reach it again.
+  thread->stack_start = CATNIP_NULL;
+  thread->stack_ptr = CATNIP_NULL;
+  thread->stack_end = CATNIP_NULL;
 }
 
 void catnip_thread_yield(catnip_thread *thread, catnip_thread_fnptr dst) {

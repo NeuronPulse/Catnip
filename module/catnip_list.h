@@ -32,6 +32,9 @@ void catnip_list_remove(catnip_list *list, catnip_ui32_t item_size, catnip_ui32_
 #define CATNIP_LIST_LENGTH(list, type) (catnip_list_length((list)))
 catnip_ui32_t catnip_list_length(catnip_list *list);
 
+// For callers that compact a list in place and know how many entries survived.
+#define CATNIP_LIST_SET_LENGTH(list, value) ((list)->length = (value))
+
 #define CATNIP_LIST_INSERT(list, type, index, item) (catnip_list_insert((list), sizeof(type), (index), (void*) (&item)))
 void catnip_list_insert(catnip_list *list, catnip_ui32_t item_size, catnip_ui32_t index, const void *item);
 
