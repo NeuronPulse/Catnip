@@ -16,8 +16,12 @@ import { CatnipCompilerLogger } from "../compiler/CatnipCompilerLogger";
  * A wrapper for the catnip wasm runtime
  */
 
-/** Simulation steps (frames) per second, mirroring scratch-vm's compatibility rate. */
-export const CATNIP_DEFAULT_STEP_RATE = 30;
+/**
+ * Simulation steps (frames) per second. scratch-vm's default is 60
+ * (see Runtime.THREAD_STEP_INTERVAL); it drops to its 30Hz compatibility rate
+ * when a project needs it (see runtime.isCompatibilityMode).
+ */
+export const CATNIP_DEFAULT_STEP_RATE = 60;
 
 /**
  * Per-step work budget in milliseconds for a given step rate.

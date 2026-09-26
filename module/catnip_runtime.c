@@ -27,6 +27,9 @@ catnip_runtime *catnip_runtime_new() {
   rt->gc_alloc_since_last_gc = 0;
   rt->gc_alloc_threshold = CATNIP_GC_MIN_ALLOC_BYTES;
 
+  // Left null when stats are compiled out, so the host can tell the difference
+  // between "no stats" and a garbage pointer.
+  rt->gc_stats = CATNIP_NULL;
 #ifdef CATNIP_GC_STATS
   rt->gc_stats = catnip_mem_alloc(sizeof(catnip_runtime_gc_stats));
   catnip_mem_zero(rt->gc_stats, sizeof(catnip_runtime_gc_stats));

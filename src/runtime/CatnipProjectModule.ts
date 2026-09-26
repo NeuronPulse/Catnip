@@ -98,7 +98,11 @@ export class CatnipProjectModule {
         return this.runtimeInstance.getMember("num_active_threads") !== 0;
     }
 
+    /** GC statistics for the last collection. Release builds have none. */
     public getGcStats(): CatnipRuntimeGcStats {
+        if (this.runtimeInstance.getMember("gc_stats") === 0)
+            throw new Error("This runtime was built without GC statistics (see CATNIP_GC_STATS).");
+
         return this.runtimeInstance.getMemberWrapper("gc_stats").getInner();
     }
 

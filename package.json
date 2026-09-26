@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "concurrently \"serve\" \"rollup -c -w\"",
     "build": "rollup -c",
+    "wasm": "make release",
+    "wasm:debug": "make debug",
     "test": "tap run test/index.ts",
     "play": "node --no-deprecation --enable-source-maps --import ./ts-node.register.js ./index.ts"
   },
