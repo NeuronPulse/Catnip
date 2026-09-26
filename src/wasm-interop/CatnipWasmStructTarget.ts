@@ -3,6 +3,11 @@ import { CatnipWasmPtrSprite } from "./CatnipWasmStructSprite";
 import { CatnipWasmUnionValue } from "./CatnipWasmStructValue";
 import { WasmInt32, WasmPtr, WasmStruct, WasmUInt32, WasmPtrVoid, WasmArray, WasmBool32, WasmFloat32, WasmFloat64 } from "./wasm-types";
 
+/** Mirrors CATNIP_TARGET_FLAG_* in module/catnip_target.h. */
+export const CATNIP_TARGET_FLAG_IS_CLONE = 1 << 0;
+export const CATNIP_TARGET_FLAG_IS_STAGE = 1 << 1;
+export const CATNIP_TARGET_FLAG_IS_VISIBLE = 1 << 2;
+
 export const CatnipWasmStructTarget = new WasmStruct("catnip_target", {
     runtime: WasmPtrVoid,
     sprite: CatnipWasmPtrSprite,

@@ -434,8 +434,14 @@ function readTargetMeta(meta: SB3ReadMetadata, target: ProjectSB3Target): Catnip
         target: {
             variables: variableValueDesc,
             lists: listValueDesc,
-            x_position: 0,
-            y_position: 0,
+            // The stage has no position, direction, size or visibility of its
+            // own; Scratch's defaults are what its blocks see.
+            isStage: target.isStage,
+            visible: target.isStage ? true : target.visible,
+            x_position: target.isStage ? 0 : target.x,
+            y_position: target.isStage ? 0 : target.y,
+            direction: target.isStage ? 90 : target.direction,
+            size: target.isStage ? 100 : target.size,
             currentCostume: target.currentCostume
         }
     };

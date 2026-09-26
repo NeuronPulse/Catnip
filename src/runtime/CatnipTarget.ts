@@ -1,7 +1,7 @@
 import { WasmStructWrapper } from "../wasm-interop/wasm-types";
 import { CatnipSprite } from "./CatnipSprite";
 import { CatnipVariableID } from "./CatnipVariable";
-import { CatnipWasmStructTarget } from '../wasm-interop/CatnipWasmStructTarget';
+import { CatnipWasmStructTarget, CATNIP_TARGET_FLAG_IS_STAGE, CATNIP_TARGET_FLAG_IS_VISIBLE } from '../wasm-interop/CatnipWasmStructTarget';
 import { CatnipListID } from "./CatnipList";
 import { CatnipWasmStructValue, CatnipWasmUnionValue } from "../wasm-interop/CatnipWasmStructValue";
 import { Cast } from "../compiler/cast";
@@ -10,8 +10,13 @@ export interface CatnipTargetDesc {
     variables: CatnipTargetVariableDesc[];
     lists: CatnipTargetListDesc[];
 
+    isStage: boolean;
+    visible: boolean;
+
     x_position: number;
     y_position: number;
+    direction: number;
+    size: number;
     currentCostume: number;
 }
 
@@ -131,6 +136,16 @@ export class CatnipTarget {
         }
 
         this.structWrapper.setMember("costume", this._currentCostume);
+
+        this.structWrapper.setMember("position_x", desc.x_position);
+        this.structWrapper.setMember("position_y", desc.y_position);
+        this.structWrapper.setMember("direction", desc.direction);
+        this.structWrapper.setMember("size", desc.size);
+
+        let flags = desc.isStage ? CATNIP_TARGET_FLAG_IS_STAGE : 0;
+        if (desc.visible) flags |= CATNIP_TARGET_FLAG_IS_VISIBLE;
+
+        this.structWrapper.setMember("flags", flags);
     }
 
     public getVariableValue(variableID: CatnipVariableID): string | number {
