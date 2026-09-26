@@ -408,19 +408,12 @@ function readTargetMeta(meta: SB3ReadMetadata, target: ProjectSB3Target): Catnip
             name: scratchList[0],
         });
 
-        let value: (number | string)[] = [];
-
-        for (const listValue of scratchList[1]) {
-            if (typeof listValue === "boolean") {
-                value.push("" + listValue);
-            } else {
-                value.push(listValue);
-            }
-        }
-
+        // The raw values are handed over as they were deserialized; interpreting
+        // them (booleans, numeric strings) is the target loader's job, so that a
+        // list with millions of entries is never copied here.
         listValueDesc.push({
             id: listID,
-            value: value
+            value: scratchList[1]
         });
     }
 

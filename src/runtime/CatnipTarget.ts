@@ -22,7 +22,12 @@ export interface CatnipTargetVariableDesc {
 
 export interface CatnipTargetListDesc {
     id: CatnipListID;
-    value: (number | string)[];
+    /**
+     * The list's initial contents, exactly as they were deserialized: the
+     * values are only interpreted here, so that a list with millions of entries
+     * does not have to be copied first.
+     */
+    value: readonly (number | string | boolean)[];
 }
 
 export class CatnipTarget {
@@ -88,20 +93,40 @@ export class CatnipTarget {
             listWrapper.setMember("capacity", value.length);
             listWrapper.setMember("data", listDataPtr);
 
+            // Values that Scratch treats as numbers are stored straight into the
+            // f64 arm of the value union. Going through a fresh union wrapper per
+            // entry instead costs seconds on a list with millions of entries, and
+            // a list's numeric entries are exactly the ones there are millions of.
+            const bufferProvider = listWrapper.bufferProvider;
+            let numbers = new Float64Array(bufferProvider().buffer, listDataPtr, value.length);
+
             for (let itemIndex = 0; itemIndex < value.length; itemIndex++) {
                 let listItem = value[itemIndex];
+
+                if (typeof listItem === "boolean") listItem = "" + listItem;
 
                 if (typeof listItem === "string") {
                     const listItemNumber = Cast.toNumber(listItem);
 
-                    if (Cast.toString(listItemNumber) === listItem)
+                    if (Cast.toString(listItemNumber) === listItem) {
                         listItem = listItemNumber;
+                    } else {
+                        // The entry really is a string, so it has to be interned.
+                        // Interning allocates in the runtime's memory, which can
+                        // grow — and so detach the view above — while we do it.
+                        this.runtime.setValue(
+                            CatnipWasmUnionValue.getWrapper(listDataPtr + itemIndex * CatnipWasmUnionValue.size, bufferProvider),
+                            listItem
+                        );
+
+                        if (numbers.buffer !== bufferProvider().buffer)
+                            numbers = new Float64Array(bufferProvider().buffer, listDataPtr, value.length);
+
+                        continue;
+                    }
                 }
 
-                this.runtime.setValue(
-                    CatnipWasmUnionValue.getWrapper(listDataPtr + itemIndex * CatnipWasmUnionValue.size, listWrapper.bufferProvider),
-                    listItem
-                );
+                numbers[itemIndex] = listItem;
             }
         }
 
