@@ -39,6 +39,8 @@ catnip_runtime *catnip_runtime_new() {
   catnip_mem_zero(rt->io, sizeof(catnip_io));
 
   rt->random_state = catnip_mem_alloc(sizeof(catnip_math_random_state));
+
+  rt->warp_check_counter = 0;
   
   update_time(rt);
   rt->timer_start = rt->time;
@@ -110,6 +112,16 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
 }
 
 catnip_bool_t catnip_runtime_warp_expired(catnip_runtime *runtime) {
+  // Generated warp loops call this at every loop boundary, so the cost here is
+  // paid per iteration. Reading the clock means calling out of wasm into the
+  // host, which costs far more than a tight loop iteration does, so only sample
+  // it once every so many boundaries. Overshooting the deadline by that many
+  // iterations is a few microseconds of work.
+  if (++runtime->warp_check_counter < CATNIP_WARP_CHECK_INTERVAL)
+    return CATNIP_FALSE;
+
+  runtime->warp_check_counter = 0;
+
   return catnip_import_perf_time() >= runtime->tick_deadline;
 }
 

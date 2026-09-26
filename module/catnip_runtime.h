@@ -67,6 +67,10 @@ typedef struct catnip_runtime_gc_stats catnip_runtime_gc_stats;
 
 #define CATNIP_STEP_TIME_MS 10000
 
+/* How many warp loop boundaries pass between samples of the clock. See
+ * catnip_runtime_warp_expired. */
+#define CATNIP_WARP_CHECK_INTERVAL 256
+
 struct catnip_runtime {
 
     catnip_ui32_t cfg_tick_time;
@@ -99,6 +103,7 @@ struct catnip_runtime {
     /* Monotonic time (see catnip_import_perf_time) by which the current tick must
      * stop stepping threads. Warp loops check this to decide if they should yield. */
     catnip_f64_t tick_deadline;
+    catnip_ui32_t warp_check_counter;
 
     catnip_ui32_t gc_alloc_since_last_gc;
     catnip_ui32_t gc_alloc_threshold;

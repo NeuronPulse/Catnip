@@ -319,7 +319,12 @@ export class CatnipCompilerIrGenContext {
                 } else {
                     if (status === undefined) status = CatnipWasmEnumThreadStatus.RUNNING;
                     this._createBlockFunction(block);
-                    this.emitIr(ir_yield, { status }, { branch: new CatnipIrInternalBranch(block, true) });
+                    // Not a loop branch, even when the caller is jumping
+                    // backwards: the flag stops the tail walker (see
+                    // CatnipIrBranch._appendTails) from following this yield's
+                    // target, which hides the target from the join below and leaves
+                    // the block the thread resumes in empty.
+                    this.emitIr(ir_yield, { status }, { branch: new CatnipIrInternalBranch(block, false) });
                 }
             }),
             false_branch: this.emitBranch(),

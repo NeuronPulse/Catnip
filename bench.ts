@@ -12,6 +12,7 @@ import fs from "node:fs/promises";
 //                         A tiny rate makes the step budget effectively
 //                         unbounded, so each step runs until the project yields;
 //                         that measures raw throughput instead of frame time.
+//   BENCH_WARP_TIMER=0    disable the warp loop time check (default: on)
 const projectPath = process.argv[2];
 const maxSteps = Number(process.argv[3] ?? 5_000_000);
 const maxMs = Number(process.argv[4] ?? 10_000);
@@ -24,6 +25,7 @@ if (!projectPath) {
 const useBinaryen = process.env.BENCH_BINARYEN !== "0";
 const inlineForce = process.env.BENCH_INLINE_FORCE === "1";
 const stepRate = process.env.BENCH_STEP_RATE === undefined ? undefined : Number(process.env.BENCH_STEP_RATE);
+const warpTimer = process.env.BENCH_WARP_TIMER !== "0";
 
 function percentile(sorted: number[], p: number): number {
     if (sorted.length === 0) return 0;
@@ -41,6 +43,7 @@ async function main() {
     const mod = await project.compile({
         enable_optimization_binaryen: useBinaryen,
         enable_optimization_variable_inlining_force: inlineForce,
+        enable_warp_timer: warpTimer,
         dump_stage_timings: true,
     });
     const tCompile = Date.now() - t1;

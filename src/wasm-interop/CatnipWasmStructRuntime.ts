@@ -36,6 +36,7 @@ export const CatnipWasmStructRuntime = new WasmStruct("catnip_runtime", {
     timer_start: WasmUInt64,
 
     tick_deadline: WasmFloat64,
+    warp_check_counter: WasmUInt32,
 
     gc_alloc_since_last_gc: WasmUInt32,
     gc_alloc_threshold: WasmUInt32,
