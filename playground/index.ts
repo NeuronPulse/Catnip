@@ -1,10 +1,13 @@
 
-import { CatnipRenderer } from "../renderer";
+import { CatnipScratchRenderer, CatnipCostumeAsset, CatnipTargetRenderInfo } from "../renderer/scratch";
 
 type WorkerMessage =
     | { kind: "penLines", data: Float32Array, length: number }
     | { kind: "penErase" }
+    | { kind: "drawState", data: Float32Array }
     | { kind: "frame" }
+    | { kind: "targets", targets: CatnipTargetRenderInfo[] }
+    | { kind: "costumes", costumes: CatnipCostumeAsset[] }
     | { kind: "stepRate", hz: number }
     | { kind: "ready" }
     | { kind: "error", message: string };
@@ -39,7 +42,7 @@ function scratchKeyCode(event: KeyboardEvent): number | null {
 }
 
 async function main() {
-    const renderer = new CatnipRenderer();
+    const renderer = new CatnipScratchRenderer();
     const worker = new Worker("worker.js");
 
     let drawPending = false;
@@ -75,8 +78,10 @@ async function main() {
             const canvasElement = renderer.canvasElement;
             const rect = canvasElement.getBoundingClientRect();
 
-            const mouseX = (event.clientX - rect.left) / canvasElement.width;
-            const mouseY = (event.clientY - rect.top) / canvasElement.height;
+            // The canvas backing store is scaled by the device pixel ratio;
+            // the event is in CSS pixels, so measure against the CSS box.
+            const mouseX = (event.clientX - rect.left) / rect.width;
+            const mouseY = (event.clientY - rect.top) / rect.height;
 
             const centeredX = mouseX - 0.5;
             const centeredY = mouseY - 0.5;
@@ -103,6 +108,16 @@ async function main() {
             case "penErase":
                 renderer.penEraseAll();
                 drawPending = true;
+                break;
+            case "drawState":
+                renderer.applyDrawState(message.data);
+                break;
+            case "targets":
+                renderer.initTargets(message.targets);
+                break;
+            case "costumes":
+                for (const costume of message.costumes)
+                    renderer.addCostume(costume);
                 break;
             case "frame":
                 drawPending = true;

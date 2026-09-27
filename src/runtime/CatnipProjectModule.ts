@@ -5,6 +5,8 @@ import { CATNIP_DEFAULT_STEP_RATE, CatnipRuntimeModule, catnipTickBudgetMs } fro
 import { CatnipWasmStructRuntime } from "../wasm-interop/CatnipWasmStructRuntime";
 import { WasmStructValue, WasmStructWrapper } from "../wasm-interop/wasm-types";
 import { CatnipRuntimeGcStats, CatnipWasmStructRuntimeGcStats } from '../wasm-interop/CatnipWasmStructRuntimeGcStats';
+import { DRAW_STATE, DRAW_STATE_STRIDE } from "./ICatnipRenderer";
+import { CATNIP_TARGET_FLAG_IS_VISIBLE } from "../wasm-interop/CatnipWasmStructTarget";
 
 export type CatnipProjectModuleEvent<TEvnetID extends CatnipEventID = CatnipEventID> = { id: TEvnetID, exportName: string };
 
@@ -88,10 +90,41 @@ export class CatnipProjectModule {
     }
 
     public frame(): void {
+        // Hand the renderer the current visual state of every target. The
+        // buffer is handed over, not copied, so it is rebuilt every frame.
+        this.runtimeModule.renderer.drawState(this._serializeDrawState());
         // Flush pen lines
         this.runtimeModule.functions.catnip_runtime_render_pen_flush(this.runtimeInstance.ptr);
         // Call the renderer
         this.runtimeModule.renderer.frame();
+    }
+
+    /** Packs every sprite's target state into DRAW_STATE_STRIDE floats each. */
+    private _serializeDrawState(): Float32Array {
+        const sprites = Array.from(this.project.sprites);
+        const state = new Float32Array(sprites.length * DRAW_STATE_STRIDE);
+
+        for (let i = 0; i < sprites.length; i++) {
+            const target = sprites[i].defaultTarget.structWrapper;
+            const base = i * DRAW_STATE_STRIDE;
+
+            state[base + DRAW_STATE.x] = target.getMember("position_x");
+            state[base + DRAW_STATE.y] = target.getMember("position_y");
+            state[base + DRAW_STATE.direction] = target.getMember("direction");
+            state[base + DRAW_STATE.size] = target.getMember("size");
+            state[base + DRAW_STATE.costume] = target.getMember("costume");
+            state[base + DRAW_STATE.visible] =
+                (target.getMember("flags") & CATNIP_TARGET_FLAG_IS_VISIBLE) !== 0 ? 1 : 0;
+            state[base + DRAW_STATE.effect_color] = target.getMember("effect_color");
+            state[base + DRAW_STATE.effect_fisheye] = target.getMember("effect_fisheye");
+            state[base + DRAW_STATE.effect_whirl] = target.getMember("effect_whirl");
+            state[base + DRAW_STATE.effect_pixelate] = target.getMember("effect_pixelate");
+            state[base + DRAW_STATE.effect_mosaic] = target.getMember("effect_mosaic");
+            state[base + DRAW_STATE.effect_brightness] = target.getMember("effect_brightness");
+            state[base + DRAW_STATE.effect_ghost] = target.getMember("effect_ghost");
+        }
+
+        return state;
     }
 
     public hasRunningThreads() : boolean {

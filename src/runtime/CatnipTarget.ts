@@ -18,6 +18,11 @@ export interface CatnipTargetDesc {
     direction: number;
     size: number;
     currentCostume: number;
+
+    /** How the sprite rotates; the stage is always "all around". */
+    rotationStyle: "all around" | "left-right" | "don't rotate";
+    /** Scratch's saved z-order: higher layers are drawn in front. */
+    layerOrder: number;
 }
 
 export interface CatnipTargetVariableDesc {
@@ -47,6 +52,9 @@ export class CatnipTarget {
 
     private _currentCostume: number;
 
+    public readonly rotationStyle: "all around" | "left-right" | "don't rotate";
+    public readonly layerOrder: number;
+
     /** @internal */
     constructor(sprite: CatnipSprite, desc: CatnipTargetDesc) {
         this.sprite = sprite;
@@ -59,6 +67,8 @@ export class CatnipTarget {
 
         this._variables = new Map();
         this._currentCostume = desc.currentCostume;
+        this.rotationStyle = desc.rotationStyle;
+        this.layerOrder = desc.layerOrder;
 
         const variableTable = this.structWrapper
             .getMemberWrapper("variable_table")

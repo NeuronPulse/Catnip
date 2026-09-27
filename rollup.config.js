@@ -4,7 +4,6 @@ import livereload from 'rollup-plugin-livereload';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import tla from 'rollup-plugin-tla';
-import { string } from "rollup-plugin-string";
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -42,10 +41,6 @@ export default [
                     // }
                 }
             ),
-
-            string({
-                include: "renderer/shaders/*",
-            }),
 
             nodeResolve({
                 browser: true

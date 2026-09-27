@@ -59,6 +59,10 @@ export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, 
 
     const project = runtime.loadProject(projectDesc);
 
+    // The zip holds the costume assets; the playground reads them out of it
+    // after compiling, headless runs never touch it again.
+    project.setAssetZip(myzip);
+
     if (project.unsupportedOpcodes.length !== 0) {
         const summary = project.unsupportedOpcodes
             .map(({ opcode, count }) => `${opcode} ×${count}`)

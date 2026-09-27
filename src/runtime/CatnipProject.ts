@@ -7,6 +7,7 @@ import { CatnipEventID, CatnipEventListener } from "../CatnipEvents";
 import { CatnipCompilerConfig } from "../compiler/CatnipCompilerConfig";
 import { CatnipProjectModule } from "./CatnipProjectModule";
 import { SB3UnsupportedOpcode } from "../sb3_reader";
+import type JSZip from "jszip";
 
 export interface CatnipProjectDesc {
     sprites: CatnipSpriteDesc[];
@@ -36,6 +37,39 @@ export class CatnipProject {
     public get sprites(): IterableIterator<CatnipSprite> { return this._sprites.values(); }
 
     private readonly _events: Map<CatnipEventID, EventInfo>;
+
+    /**
+     * The project zip the host may keep for the asset files (costumes). Only
+     * the playground needs it: reading and compiling a project only ever needs
+     * project.json, so headless runs leave this null.
+     */
+    private _assetZip: JSZip | null = null;
+
+    public setAssetZip(zip: JSZip): void {
+        this._assetZip = zip;
+    }
+
+    /**
+     * Reads a raw asset file (a costume) out of the project zip, looked up by
+     * its file name as costumes refer to it ("md5.ext").
+     */
+    public async readAsset(md5ext: string): Promise<Uint8Array> {
+        const zip = this._assetZip;
+
+        if (zip === null)
+            throw new Error(`Cannot read asset '${md5ext}': the project's zip was not kept.`);
+
+        for (const path in zip.files) {
+            const entry = zip.files[path];
+            if (entry.dir) continue;
+            if (path.includes("__MACOSX/")) continue;
+            if (path.split("/").pop() !== md5ext) continue;
+
+            return entry.async("uint8array");
+        }
+
+        throw new Error(`The project zip does not contain the asset '${md5ext}'.`);
+    }
 
     /** @internal */
     constructor(runtime: CatnipRuntimeModule, desc: CatnipProjectDesc) {

@@ -457,7 +457,12 @@ function readTargetMeta(meta: SB3ReadMetadata, target: ProjectSB3Target): Catnip
 
     for (const costume of target.costumes) {
         costumes.push({
-            name: costume.name
+            name: costume.name,
+            md5ext: costume.md5ext,
+            dataFormat: costume.dataFormat,
+            rotationCenterX: costume.rotationCenterX,
+            rotationCenterY: costume.rotationCenterY,
+            bitmapResolution: costume.bitmapResolution ?? 1
         });
     }
 
@@ -480,7 +485,9 @@ function readTargetMeta(meta: SB3ReadMetadata, target: ProjectSB3Target): Catnip
             y_position: target.isStage ? 0 : target.y,
             direction: target.isStage ? 90 : target.direction,
             size: target.isStage ? 100 : target.size,
-            currentCostume: target.currentCostume
+            currentCostume: target.currentCostume,
+            rotationStyle: target.isStage ? "all around" : target.rotationStyle,
+            layerOrder: target.layerOrder
         }
     };
 }
