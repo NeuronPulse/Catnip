@@ -295,7 +295,7 @@ void catnip_blockutil_pen_update_thsv(catnip_target *target) {
   target->pen_thsv_valid = CATNIP_TRUE;
   target->pen_transparency = (1 - a) * 100;
   target->pen_hue = h * 100;
-  target->pen_satuation = s * 100;
+  target->pen_saturation = s * 100;
   target->pen_value = v * 100;
 }
 
@@ -305,7 +305,7 @@ void catnip_blockutil_pen_update_argb(catnip_target *target) {
   CATNIP_ASSERT(!target->pen_argb_valid);
 
   catnip_f64_t h = (target->pen_hue / 100) * 360;
-  catnip_f64_t s = target->pen_satuation / 100;
+  catnip_f64_t s = target->pen_saturation / 100;
   catnip_f64_t v = target->pen_value / 100;
 
   h = catnip_math_fmod(h, 360);

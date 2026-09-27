@@ -35,10 +35,21 @@ export const CatnipWasmStructTarget = new WasmStruct("catnip_target", {
     pen_argb: WasmUInt32,
     
     pen_thsv_valid: WasmBool32,
-    pen_transparnecy: WasmFloat64,
+    pen_transparency: WasmFloat64,
     pen_hue: WasmFloat64,
     pen_saturation: WasmFloat64,
     pen_value: WasmFloat64,
+
+    effect_color: WasmFloat64,
+    effect_fisheye: WasmFloat64,
+    effect_whirl: WasmFloat64,
+    effect_pixelate: WasmFloat64,
+    effect_mosaic: WasmFloat64,
+    effect_brightness: WasmFloat64,
+    effect_ghost: WasmFloat64,
+
+    volume: WasmInt32,
+    tempo: WasmInt32,
 });
 
 export const CatnipWasmPtrTarget = new WasmPtr(CatnipWasmStructTarget);

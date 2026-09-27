@@ -44,7 +44,7 @@ struct catnip_target {
     catnip_bool_t pen_thsv_valid;
     catnip_f64_t pen_transparency;
     catnip_f64_t pen_hue;
-    catnip_f64_t pen_satuation;
+    catnip_f64_t pen_saturation;
     catnip_f64_t pen_value;
     
     catnip_f64_t effect_color;

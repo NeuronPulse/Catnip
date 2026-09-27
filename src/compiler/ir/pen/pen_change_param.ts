@@ -31,7 +31,7 @@ export const ir_pen_change_param = new class extends CatnipIrCommandOpType<pen_c
                     paramMemberOffset = CatnipWasmStructTarget.getMemberOffset("pen_value");
                     break;
                 case "transparency":
-                    paramMemberOffset = CatnipWasmStructTarget.getMemberOffset("pen_transparnecy");
+                    paramMemberOffset = CatnipWasmStructTarget.getMemberOffset("pen_transparency");
                     break;
                 default:
                     CatnipCompilerLogger.warn(`Invalid constant color param name '${paramName}'.`);
