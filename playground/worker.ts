@@ -141,7 +141,9 @@ async function main() {
     // const sb3File = await (await fetch('Mandlebrot Set Benchmark.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('lines.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('fib.sb3')).arrayBuffer();
-    const sb3File = await (await fetch('LOS.sb3')).arrayBuffer();
+    // The playground project: ?sb3=<file in public/> overrides the default.
+    const sb3Name = new URLSearchParams(self.location.search).get("sb3") ?? "LOS.sb3";
+    const sb3File = await (await fetch(sb3Name)).arrayBuffer();
     const module = await WebAssembly.compileStreaming(moduleRequest);
 
     const project = await run(module, sb3File, new RemoteRenderer());

@@ -43,7 +43,9 @@ function scratchKeyCode(event: KeyboardEvent): number | null {
 
 async function main() {
     const renderer = new CatnipScratchRenderer();
-    const worker = new Worker("worker.js");
+    // Forward the page's query string: the worker reads ?sb3= from its own
+    // location.search, which a bare Worker URL would leave empty.
+    const worker = new Worker("worker.js" + location.search);
 
     let drawPending = false;
 
