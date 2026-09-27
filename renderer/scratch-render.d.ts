@@ -24,6 +24,9 @@ declare module "scratch-render" {
         createDrawable(group: string): number;
         destroyDrawable(drawableID: number, group: string): void;
 
+        /** Topmost visible drawable under a canvas-relative CSS-pixel point, or -1. */
+        pick(centerX: number, centerY: number, touchWidth?: number, touchHeight?: number, candidateIDs?: number[]): number;
+
         updateDrawableSkinId(drawableID: number, skinId: number): void;
         updateDrawablePosition(drawableID: number, position: [number, number]): void;
         updateDrawableDirectionScale(drawableID: number, direction: number, scale: [number, number]): void;

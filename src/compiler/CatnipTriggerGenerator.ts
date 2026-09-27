@@ -21,18 +21,27 @@ export class CatnipTriggerFunctionGenerator {
     public readonly triggerFunction: SpiderFunctionDefinition;
     public readonly writeThreadList: boolean;
     public readonly startMode: number;
+    /**
+     * When set, the generated function takes the clicked target's pointer as
+     * its only parameter and starts every trigger on that very target,
+     * without walking the global target list (the caller already picked the
+     * target for us).
+     */
+    public readonly targetParam: boolean;
 
     private _generated: boolean;
 
-    public constructor(compiler: CatnipCompiler, writeThreadList: boolean, startMode: number) {
+    public constructor(compiler: CatnipCompiler, writeThreadList: boolean, startMode: number, targetParam: boolean = false) {
+        CatnipCompilerLogger.assert(!writeThreadList || !targetParam, true, "writeThreadList and targetParam cannot both be set.");
         this.compiler = compiler;
         this.triggers = new Map();
         this.triggerFunction = this.compiler.spiderModule.createFunction();
         this._generated = false;
         this.writeThreadList = writeThreadList;
         this.startMode = startMode;
+        this.targetParam = targetParam;
 
-        if (this.writeThreadList) {
+        if (this.writeThreadList || this.targetParam) {
             this.triggerFunction.addParameter(SpiderNumberType.i32);
         }
     }
@@ -52,6 +61,22 @@ export class CatnipTriggerFunctionGenerator {
 
     public createEventFunction(): SpiderFunctionDefinition {
         CatnipCompilerLogger.assert(!this._generated, true, "Function already generated.");
+
+        if (this.targetParam) {
+            // The caller already picked the target: start every trigger of
+            // this sprite directly on it.
+            const targetVarRef = this.triggerFunction.getParameter(0);
+            for (const triggers of this.triggers.values()) {
+                for (const trigger of triggers) {
+                    this.triggerFunction.body.emit(SpiderOpcodes.local_get, targetVarRef);
+                    this.triggerFunction.body.emitConstant(SpiderNumberType.i32, trigger.ir.entrypoint.functionTableIndex);
+                    this.triggerFunction.body.emitConstant(SpiderNumberType.i32, 0);
+                    this.triggerFunction.body.emitConstant(SpiderNumberType.i32, this.startMode);
+                    this.triggerFunction.body.emit(SpiderOpcodes.call, this.compiler.getRuntimeFunction("catnip_target_start_thread"));
+                }
+            }
+            return this.triggerFunction;
+        }
 
         let threadListPtrVarRef: SpiderLocalParameterReference;
 

@@ -77,6 +77,12 @@ async function main() {
                                     Number(arg)
                                 ]);
                                 break;
+                            // "click N" clicks target N (0 = stage, sprites
+                            // follow in project order); the index becomes the
+                            // target's pointer when the event is flushed.
+                            case "click":
+                                pendingEvents.push(["IO_CLICK_TARGET", Number(arg)]);
+                                break;
                             case "comment":
                                 t.comment(message);
                                 break;
@@ -100,8 +106,18 @@ async function main() {
 
             do {
                 while (pendingEvents.length !== 0) {
-                    const [eventID, keyCode] = pendingEvents.shift()!;
-                    projectModule.triggerEvent(eventID, keyCode);
+                    const [eventID, arg] = pendingEvents.shift()!;
+                    if (eventID === "IO_CLICK_TARGET") {
+                        let spriteIndex = 0;
+                        for (const sprite of project.sprites) {
+                            if (spriteIndex++ === arg) {
+                                projectModule.triggerEvent("IO_CLICK_TARGET", sprite.defaultTarget.structWrapper.ptr);
+                                break;
+                            }
+                        }
+                    } else {
+                        projectModule.triggerEvent(eventID, arg);
+                    }
                 }
 
                 projectModule.step();

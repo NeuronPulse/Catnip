@@ -93,8 +93,20 @@ async function main() {
             worker.postMessage({ kind: "mouseUp" });
         });
 
-        document.addEventListener("mousedown", () => {
+        document.addEventListener("mousedown", (event) => {
             worker.postMessage({ kind: "mouseDown" });
+
+            const canvasElement = renderer.canvasElement;
+            const rect = canvasElement.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            // Click hats fire on mouse down for non-draggable targets, and
+            // only for clicks inside the canvas (scratch-vm's mouse.postData);
+            // the pick falls back to the stage when nothing is hit.
+            if (x > 0 && x < rect.width && y > 0 && y < rect.height) {
+                worker.postMessage({ kind: "click", targetIndex: renderer.pickTargetIndex(x, y) });
+            }
         });
     }
 

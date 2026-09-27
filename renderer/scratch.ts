@@ -54,6 +54,7 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
     private _drawables: (number | undefined)[] = [];
     private _skins: Map<string, number> = new Map();
     private _appliedSkins: (number | undefined)[] = [];
+    private _stageIndex: number = 0;
 
     private _penDrawableID: number | null = null;
     private _penSkinID: number | null = null;
@@ -79,7 +80,23 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
         for (const info of ordered) {
             const group = info.isStage ? "background" : "sprite";
             this._drawables[info.index] = this._renderer.createDrawable(group);
+            if (info.isStage) this._stageIndex = info.index;
         }
+    }
+
+    /**
+     * Picks the topmost visible target under a canvas-relative point in CSS
+     * pixels and returns its index (the same indexing as the draw states);
+     * falls back to the stage when nothing is hit, like scratch-vm's
+     * mouse._pickTarget.
+     */
+    public pickTargetIndex(cssX: number, cssY: number): number {
+        const drawableID = this._renderer.pick(cssX, cssY);
+        if (drawableID !== -1) {
+            const index = this._drawables.indexOf(drawableID);
+            if (index !== -1) return index;
+        }
+        return this._stageIndex;
     }
 
     /** Builds the skin for one costume; SVGs are ready immediately, bitmaps decode asynchronously. */

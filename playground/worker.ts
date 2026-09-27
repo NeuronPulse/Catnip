@@ -42,6 +42,7 @@ type FromMainMessage =
     | { kind: "mouseMove", x: number, y: number }
     | { kind: "mouseDown" }
     | { kind: "mouseUp" }
+    | { kind: "click", targetIndex: number }
     | { kind: "stepRate", hz: number }
     | { kind: "event", id: string, args: number[] };
 
@@ -175,6 +176,19 @@ async function main() {
             case "mouseUp":
                 projectModule.triggerEvent("IO_MOUSE_UP");
                 break;
+            case "click": {
+                // The pick gives an index in project.sprites order (the same
+                // order the draw states are packed in); the event carries the
+                // clicked target's pointer.
+                let targetIndex = 0;
+                for (const sprite of project.sprites) {
+                    if (targetIndex++ === message.targetIndex) {
+                        projectModule.triggerEvent("IO_CLICK_TARGET", sprite.defaultTarget.structWrapper.ptr);
+                        break;
+                    }
+                }
+                break;
+            }
             case "stepRate":
                 setStepRate(message.hz);
                 break;

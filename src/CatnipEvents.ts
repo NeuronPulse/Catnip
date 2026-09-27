@@ -87,6 +87,10 @@ export const CatnipEvents = {
     IO_MOUSE_MOVE: new CatnipEventInfo(["NUMBER", "NUMBER"] as const), // x, y
     IO_MOUSE_DOWN: new CatnipEventInfo([] as const),
     IO_MOUSE_UP: new CatnipEventInfo([] as const),
+    // Pointer of the target that was clicked (the stage, when the pick
+    // hits nothing). Both click hat opcodes listen to this one event;
+    // scratch-vm treats them as label-only variants of the same hat.
+    IO_CLICK_TARGET: new CatnipEventInfo(["POINTER"] as const),
     
     TARGET_POSITION_UPDATE: new CatnipEventInfo(["NUMBER", "NUMBER"] as const),
 } satisfies Record<string, CatnipEventInfo<any>>;

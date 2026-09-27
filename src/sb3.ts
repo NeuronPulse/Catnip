@@ -450,6 +450,8 @@ type SB3BlockTypeDefinition = {
     }
 
     "event_whenflagclicked": {},
+    "event_whenthisspriteclicked": {},
+    "event_whenstageclicked": {},
     "event_broadcast": {
         inputs: {
             "BROADCAST_INPUT": ProjectSB3Input
