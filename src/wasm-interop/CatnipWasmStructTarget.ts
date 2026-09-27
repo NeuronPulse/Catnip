@@ -8,6 +8,11 @@ export const CATNIP_TARGET_FLAG_IS_CLONE = 1 << 0;
 export const CATNIP_TARGET_FLAG_IS_STAGE = 1 << 1;
 export const CATNIP_TARGET_FLAG_IS_VISIBLE = 1 << 2;
 
+/** Mirrors CATNIP_ROTATION_STYLE_* in module/catnip_target.h. */
+export const CATNIP_ROTATION_STYLE_ALL_AROUND = 0;
+export const CATNIP_ROTATION_STYLE_LEFT_RIGHT = 1;
+export const CATNIP_ROTATION_STYLE_NONE = 2;
+
 export const CatnipWasmStructTarget = new WasmStruct("catnip_target", {
     runtime: WasmPtrVoid,
     sprite: CatnipWasmPtrSprite,
@@ -50,6 +55,8 @@ export const CatnipWasmStructTarget = new WasmStruct("catnip_target", {
 
     volume: WasmInt32,
     tempo: WasmInt32,
+
+    rotation_style: WasmUInt32,
 });
 
 export const CatnipWasmPtrTarget = new WasmPtr(CatnipWasmStructTarget);

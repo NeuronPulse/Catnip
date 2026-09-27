@@ -11,6 +11,7 @@
 #define CATNIP_F64_SIGNBIT(x) __builtin_signbit(x)
 #define CATNIP_F64_SQRT(x) __builtin_sqrt(x)
 #define CATNIP_F64_FLOOR(x) __builtin_floor(x)
+#define CATNIP_F64_CEIL(x) __builtin_ceil(x)
 #define CATNIP_F64_ABS(x) __builtin_fabs(x)
 
 #define CATNIP_F32_ISNAN(x) __builtin_isnan(x)

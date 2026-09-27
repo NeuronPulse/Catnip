@@ -1,7 +1,7 @@
 import { WasmStructWrapper } from "../wasm-interop/wasm-types";
 import { CatnipSprite } from "./CatnipSprite";
 import { CatnipVariableID } from "./CatnipVariable";
-import { CatnipWasmStructTarget, CATNIP_TARGET_FLAG_IS_STAGE, CATNIP_TARGET_FLAG_IS_VISIBLE } from '../wasm-interop/CatnipWasmStructTarget';
+import { CatnipWasmStructTarget, CATNIP_TARGET_FLAG_IS_STAGE, CATNIP_TARGET_FLAG_IS_VISIBLE, CATNIP_ROTATION_STYLE_ALL_AROUND, CATNIP_ROTATION_STYLE_LEFT_RIGHT, CATNIP_ROTATION_STYLE_NONE } from '../wasm-interop/CatnipWasmStructTarget';
 import { CatnipListID } from "./CatnipList";
 import { CatnipWasmStructValue, CatnipWasmUnionValue } from "../wasm-interop/CatnipWasmStructValue";
 import { Cast } from "../compiler/cast";
@@ -151,6 +151,13 @@ export class CatnipTarget {
         this.structWrapper.setMember("position_y", desc.y_position);
         this.structWrapper.setMember("direction", desc.direction);
         this.structWrapper.setMember("size", desc.size);
+
+        const rotationStyles: Record<typeof desc.rotationStyle, number> = {
+            "all around": CATNIP_ROTATION_STYLE_ALL_AROUND,
+            "left-right": CATNIP_ROTATION_STYLE_LEFT_RIGHT,
+            "don't rotate": CATNIP_ROTATION_STYLE_NONE,
+        };
+        this.structWrapper.setMember("rotation_style", rotationStyles[desc.rotationStyle]);
 
         let flags = desc.isStage ? CATNIP_TARGET_FLAG_IS_STAGE : 0;
         if (desc.visible) flags |= CATNIP_TARGET_FLAG_IS_VISIBLE;

@@ -63,6 +63,10 @@ export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, 
     // after compiling, headless runs never touch it again.
     project.setAssetZip(myzip);
 
+    // Movement blocks fence against each costume's measured box, so it has to
+    // be in wasm before anything steps.
+    await project.loadCostumeBounds();
+
     if (project.unsupportedOpcodes.length !== 0) {
         const summary = project.unsupportedOpcodes
             .map(({ opcode, count }) => `${opcode} ×${count}`)

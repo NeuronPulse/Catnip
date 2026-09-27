@@ -8,6 +8,9 @@ import { CatnipCompilerConfig } from "../compiler/CatnipCompilerConfig";
 import { CatnipProjectModule } from "./CatnipProjectModule";
 import { SB3UnsupportedOpcode } from "../sb3_reader";
 import type JSZip from "jszip";
+import { createLogger } from "../log";
+
+const logger = createLogger("CatnipProject");
 
 export interface CatnipProjectDesc {
     sprites: CatnipSpriteDesc[];
@@ -69,6 +72,27 @@ export class CatnipProject {
         }
 
         throw new Error(`The project zip does not contain the asset '${md5ext}'.`);
+    }
+
+    /**
+     * Measures every costume and writes its AABB into wasm. Movement blocks
+     * fence against that box, so this must run before the project steps; a
+     * costume whose asset cannot be read keeps an all-zero box (it bounds to
+     * a point) instead of failing the run.
+     */
+    public async loadCostumeBounds(): Promise<void> {
+        if (this._assetZip === null) return;
+
+        for (const sprite of this._sprites.values()) {
+            for (const costume of sprite.costumes) {
+                try {
+                    const data = await this.readAsset(costume.md5ext);
+                    costume.measureAndWriteBounds(data);
+                } catch (e) {
+                    logger.warn(`Could not measure costume '${costume.md5ext}': ${e}`);
+                }
+            }
+        }
     }
 
     /** @internal */

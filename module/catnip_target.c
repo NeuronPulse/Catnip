@@ -38,7 +38,13 @@ catnip_target *catnip_target_new(struct catnip_runtime *runtime, catnip_sprite *
   target->pen_argb_valid = CATNIP_TRUE;
   target->pen_argb = 0;
   target->pen_thickness = 1;
-  
+
+  // Scratch's defaults for a freshly created target (the project loader
+  // overwrites these; clones arrive through this path).
+  target->direction = 90;
+  target->size = 100;
+  target->rotation_style = CATNIP_ROTATION_STYLE_ALL_AROUND;
+
   return target;
 }
 
@@ -94,9 +100,104 @@ void catnip_target_start_thread(catnip_target *target, catnip_thread_fnptr entry
   }
 }
 
-void catnip_target_set_xy(catnip_target* target, catnip_f64_t x, catnip_f64_t y) {
+void catnip_target_set_direction(catnip_target *target, catnip_f64_t direction) {
+  if (target->flags & CATNIP_TARGET_FLAG_IS_STAGE) return;
+  if (CATNIP_F64_ISNAN(direction) || CATNIP_F64_ISINFINITE(direction)) return;
 
-  // TODO We need to do fencing here, but that requires information about the costume we don't have yet.
+  // Keep direction between -179 and +180 (scratch-vm MathUtil.wrapClamp).
+  target->direction = direction - CATNIP_F64_FLOOR((direction + 179.0) / 360.0) * 360.0;
+}
+
+void catnip_target_get_bounds(catnip_target *target, catnip_bounds *out) {
+  catnip_f64_t left = 0, right = 0, top = 0, bottom = 0;
+
+  // The costume's own rectangle relative to its rotation center; a target
+  // without a costume (or before the host measured it) bounds to a point.
+  if (target->costume < target->sprite->costume_count) {
+    catnip_costume *costume = &target->sprite->costumes[target->costume];
+    left = costume->aabb_left;
+    right = costume->aabb_right;
+    top = costume->aabb_top;
+    bottom = costume->aabb_bottom;
+  }
+
+  catnip_f64_t scale = target->size / 100.0;
+  left *= scale;
+  right *= scale;
+  top *= scale;
+  bottom *= scale;
+
+  catnip_f64_t theta = 0;
+  if (target->rotation_style == CATNIP_ROTATION_STYLE_ALL_AROUND) {
+    // Scratch renders direction 90 facing right; sign does not matter for an
+    // axis-aligned box of a box, but this matches the drawable's rotation.
+    theta = (target->direction - 90.0) * (CATNIP_F64_PI / 180.0);
+  } else if (target->rotation_style == CATNIP_ROTATION_STYLE_LEFT_RIGHT &&
+             target->direction < 0) {
+    // Left-right mirrors the costume about the rotation center on x.
+    catnip_f64_t oldLeft = left;
+    left = -right;
+    right = -oldLeft;
+  }
+
+  if (theta != 0) {
+    catnip_f64_t cosT = catnip_math_cos(theta);
+    catnip_f64_t sinT = catnip_math_sin(theta);
+
+    catnip_f64_t xs[4] = { left, right, left, right };
+    catnip_f64_t ys[4] = { top, top, bottom, bottom };
+    catnip_f64_t minX = 0, maxX = 0, minY = 0, maxY = 0;
+
+    for (catnip_i32_t i = 0; i < 4; i++) {
+      catnip_f64_t x = xs[i] * cosT - ys[i] * sinT;
+      catnip_f64_t y = xs[i] * sinT + ys[i] * cosT;
+      if (i == 0 || x < minX) minX = x;
+      if (i == 0 || x > maxX) maxX = x;
+      if (i == 0 || y < minY) minY = y;
+      if (i == 0 || y > maxY) maxY = y;
+    }
+
+    left = minX;
+    right = maxX;
+    top = maxY;
+    bottom = minY;
+  }
+
+  out->left = target->position_x + left;
+  out->right = target->position_x + right;
+  out->top = target->position_y + top;
+  out->bottom = target->position_y + bottom;
+}
+
+void catnip_target_set_xy(catnip_target* target, catnip_f64_t x, catnip_f64_t y) {
+  // The stage never moves (scratch-vm setXY returns for it too).
+  if (target->flags & CATNIP_TARGET_FLAG_IS_STAGE) return;
+
+  // scratch-vm runs every move through the renderer's fence so the costume's
+  // box cannot leave the stage: the crossing edge stops FENCE_WIDTH (15px)
+  // inside, or closer when the costume is smaller than twice that (which is
+  // why this lived behind "we don't have the costume yet" for so long).
+  catnip_bounds bounds;
+  catnip_target_get_bounds(target, &bounds);
+
+  catnip_f64_t dx = x - target->position_x;
+  catnip_f64_t dy = y - target->position_y;
+
+  catnip_f64_t inset = CATNIP_F64_FLOOR(CATNIP_MIN(bounds.right - bounds.left, bounds.top - bounds.bottom) / 2.0);
+  catnip_f64_t sx = 240.0 - CATNIP_MIN(15.0, inset);
+  catnip_f64_t sy = 180.0 - CATNIP_MIN(15.0, inset);
+
+  if (bounds.right + dx < -sx) {
+    x = CATNIP_F64_CEIL(target->position_x - (sx + bounds.right));
+  } else if (bounds.left + dx > sx) {
+    x = CATNIP_F64_FLOOR(target->position_x + (sx - bounds.left));
+  }
+
+  if (bounds.top + dy < -sy) {
+    y = CATNIP_F64_CEIL(target->position_y - (sy + bounds.top));
+  } else if (bounds.bottom + dy > sy) {
+    y = CATNIP_F64_FLOOR(target->position_y + (sy - bounds.bottom));
+  }
 
   if (target->pen_down) {
     catnip_runtime_render_pen_draw_line(
