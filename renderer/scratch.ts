@@ -52,7 +52,6 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
     private readonly _renderer: RenderWebGL;
 
     private _drawables: (number | undefined)[] = [];
-    private _rotationStyles: CatnipTargetRenderInfo["rotationStyle"][] = [];
     private _skins: Map<string, number> = new Map();
     private _appliedSkins: (number | undefined)[] = [];
 
@@ -80,7 +79,6 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
         for (const info of ordered) {
             const group = info.isStage ? "background" : "sprite";
             this._drawables[info.index] = this._renderer.createDrawable(group);
-            this._rotationStyles[info.index] = info.rotationStyle;
         }
     }
 
@@ -145,12 +143,12 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
             let scaleX = size;
             const scaleY = size;
 
-            switch (this._rotationStyles[i]) {
-                case "left-right":
+            switch (data[base + DRAW_STATE.rotation_style]) {
+                case 1: // left-right
                     renderedDirection = 90;
                     if (direction < 0) scaleX = -size;
                     break;
-                case "don't rotate":
+                case 2: // don't rotate
                     renderedDirection = 90;
                     break;
             }

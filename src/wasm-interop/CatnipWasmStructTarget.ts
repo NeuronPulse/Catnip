@@ -57,6 +57,13 @@ export const CatnipWasmStructTarget = new WasmStruct("catnip_target", {
     tempo: WasmInt32,
 
     rotation_style: WasmUInt32,
+
+    glide_start_x: WasmFloat64,
+    glide_start_y: WasmFloat64,
+    glide_end_x: WasmFloat64,
+    glide_end_y: WasmFloat64,
+    glide_t0: WasmFloat64,
+    glide_duration: WasmFloat64,
 });
 
 export const CatnipWasmPtrTarget = new WasmPtr(CatnipWasmStructTarget);

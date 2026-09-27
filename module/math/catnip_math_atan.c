@@ -95,3 +95,20 @@ catnip_f64_t catnip_math_atan(catnip_f64_t x)
 	z = atanhi[id] - (x*(s1+s2) - atanlo[id] - x);
 	return sign ? -z : z;
 }
+/* atan2 via atan with the standard quadrant fixups; stage coordinates are
+   finite so the +-inf/+-0 edge cases only need to not blow up. */
+catnip_f64_t catnip_math_atan2(catnip_f64_t y, catnip_f64_t x) {
+	if (CATNIP_F64_ISNAN(x) || CATNIP_F64_ISNAN(y))
+		return CATNIP_F64_NAN;
+	if (x == 0.0 && y == 0.0)
+		return 0.0;
+	if (x == 0.0)
+		return (y > 0.0 ? 1.0 : -1.0) * (CATNIP_F64_PI / 2.0);
+	if (y == 0.0)
+		return x > 0.0 ? 0.0 : CATNIP_F64_PI;
+
+	catnip_f64_t r = catnip_math_atan(y / x);
+	if (x > 0.0)
+		return r;
+	return y >= 0.0 ? r + CATNIP_F64_PI : r - CATNIP_F64_PI;
+}

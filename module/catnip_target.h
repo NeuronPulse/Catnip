@@ -66,6 +66,17 @@ struct catnip_target {
     catnip_i32_t tempo;
 
     catnip_ui32_t rotation_style;
+
+    /* Glide interpolation state (scratch-vm keeps this in the thread's stack
+       frame; an IR transient cannot be handed to C by address, so it lives on
+       the target. Two glides on one sprite at once therefore share the slot —
+       a known deviation from scratch, which keeps one frame per thread.) */
+    catnip_f64_t glide_start_x;
+    catnip_f64_t glide_start_y;
+    catnip_f64_t glide_end_x;
+    catnip_f64_t glide_end_y;
+    catnip_f64_t glide_t0;
+    catnip_f64_t glide_duration;
 };
 
 /* An axis-aligned box in stage coordinates (y up). */

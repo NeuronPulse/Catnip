@@ -8,7 +8,7 @@ export const PEN_ATTRIBUTE_STRIDE_BYTES = PEN_ATTRIBUTE_STRIDE * 4;
  * everything a drawable needs and is sent with every rendered frame; the
  * fields mirror struct catnip_target (module/catnip_target.h).
  */
-export const DRAW_STATE_STRIDE = 13;
+export const DRAW_STATE_STRIDE = 14;
 export const DRAW_STATE = {
     x: 0,
     y: 1,
@@ -23,6 +23,8 @@ export const DRAW_STATE = {
     effect_mosaic: 10,
     effect_brightness: 11,
     effect_ghost: 12,
+    /** catnip rotation style: 0 = all around, 1 = left-right, 2 = don't rotate. */
+    rotation_style: 13,
 } as const;
 
 export interface ICatnipRenderer {

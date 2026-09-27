@@ -367,6 +367,66 @@ type SB3BlockTypeDefinition = {
     },
     "motion_xposition": {},
     "motion_yposition": {},
+    "motion_direction": {},
+    "motion_movesteps": {
+        inputs: {
+            "STEPS": ProjectSB3Input,
+        }
+    },
+    "motion_goto": {
+        inputs: {
+            "TO": ProjectSB3Input,
+        }
+    },
+    "motion_goto_menu": {
+        fields: {
+            "TO": ProjectSB3Field<null>
+        }
+    },
+    "motion_turnright": {
+        inputs: {
+            "DEGREES": ProjectSB3Input,
+        }
+    },
+    "motion_turnleft": {
+        inputs: {
+            "DEGREES": ProjectSB3Input,
+        }
+    },
+    "motion_pointindirection": {
+        inputs: {
+            "DIRECTION": ProjectSB3Input,
+        }
+    },
+    "motion_pointtowards": {
+        inputs: {
+            "TOWARDS": ProjectSB3Input,
+        }
+    },
+    "motion_pointtowards_menu": {
+        fields: {
+            "TOWARDS": ProjectSB3Field<null>
+        }
+    },
+    "motion_glidesecstoxy": {
+        inputs: {
+            "X": ProjectSB3Input,
+            "Y": ProjectSB3Input,
+            "SECS": ProjectSB3Input,
+        }
+    },
+    "motion_glideto": {
+        inputs: {
+            "TO": ProjectSB3Input,
+            "SECS": ProjectSB3Input,
+        }
+    },
+    "motion_ifonedgebounce": {},
+    "motion_setrotationstyle": {
+        inputs: {
+            "STYLE": ProjectSB3Input,
+        }
+    },
 
     "looks_say": {
         inputs: {

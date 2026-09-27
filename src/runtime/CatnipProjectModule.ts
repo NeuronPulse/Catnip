@@ -122,6 +122,7 @@ export class CatnipProjectModule {
             state[base + DRAW_STATE.effect_mosaic] = target.getMember("effect_mosaic");
             state[base + DRAW_STATE.effect_brightness] = target.getMember("effect_brightness");
             state[base + DRAW_STATE.effect_ghost] = target.getMember("effect_ghost");
+            state[base + DRAW_STATE.rotation_style] = target.getMember("rotation_style");
         }
 
         return state;

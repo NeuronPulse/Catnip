@@ -38,6 +38,7 @@ catnip_f64_t catnip_math_sin(catnip_f64_t x);
 catnip_f64_t catnip_math_cos(catnip_f64_t x);
 catnip_f64_t catnip_math_tan(catnip_f64_t x);
 catnip_f64_t catnip_math_atan(catnip_f64_t x);
+catnip_f64_t catnip_math_atan2(catnip_f64_t y, catnip_f64_t x);
 
 
 struct catnip_math_random_state {

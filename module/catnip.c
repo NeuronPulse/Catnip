@@ -1,5 +1,6 @@
 
 #include "./catnip.h"
+#include "./catnip_motion.h"
 
 void CATNIP_EXPORT(catnip_init)() {
   catnip_strings_init();
@@ -242,4 +243,51 @@ void CATNIP_EXPORT(catnip_io_mouse_down)(catnip_runtime *runtime) {
 
 void CATNIP_EXPORT(catnip_io_mouse_up)(catnip_runtime *runtime) {
   catnip_io_mouse_up(runtime);
+}
+/* Motion ----------------------------------------------------------------
+   Exports take the block's operands first and the current target last, the
+   order the compiler pushes them. */
+
+void CATNIP_EXPORT(catnip_motion_movesteps)(catnip_f64_t steps, catnip_target *target) {
+  catnip_motion_movesteps(target, steps);
+}
+
+void CATNIP_EXPORT(catnip_motion_turnright)(catnip_f64_t degrees, catnip_target *target) {
+  catnip_motion_turnright(target, degrees);
+}
+
+void CATNIP_EXPORT(catnip_motion_turnleft)(catnip_f64_t degrees, catnip_target *target) {
+  catnip_motion_turnleft(target, degrees);
+}
+
+void CATNIP_EXPORT(catnip_motion_point_direction)(catnip_f64_t direction, catnip_target *target) {
+  catnip_motion_point_direction(target, direction);
+}
+
+void CATNIP_EXPORT(catnip_motion_point_towards)(catnip_hstring *towards, catnip_target *target) {
+  catnip_motion_point_towards(target, towards);
+}
+
+void CATNIP_EXPORT(catnip_motion_goto)(catnip_hstring *to, catnip_target *target) {
+  catnip_motion_goto(target, to);
+}
+
+void CATNIP_EXPORT(catnip_motion_bounce)(catnip_target *target) {
+  catnip_motion_bounce(target);
+}
+
+void CATNIP_EXPORT(catnip_motion_set_rotation_style)(catnip_hstring *style, catnip_target *target) {
+  catnip_motion_set_rotation_style(target, style);
+}
+
+void CATNIP_EXPORT(catnip_motion_glide_begin_xy)(catnip_f64_t x, catnip_f64_t y, catnip_f64_t secs, catnip_target *target) {
+  catnip_motion_glide_begin_xy(target, x, y, secs);
+}
+
+void CATNIP_EXPORT(catnip_motion_glide_begin_to)(catnip_hstring *to, catnip_f64_t secs, catnip_target *target) {
+  catnip_motion_glide_begin_to(target, to, secs);
+}
+
+catnip_f64_t CATNIP_EXPORT(catnip_motion_glide_step)(catnip_target *target) {
+  return catnip_motion_glide_step(target);
 }
