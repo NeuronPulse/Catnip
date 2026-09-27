@@ -42,15 +42,56 @@ catnip_target *catnip_target_new(struct catnip_runtime *runtime, catnip_sprite *
   return target;
 }
 
-void catnip_target_start_new_thread(catnip_target *target, catnip_thread_fnptr entrypoint, catnip_list *threadList) {
+// The running thread of the given script on this target, if there is one.
+// A terminated thread does not count: it is about to be swept, and the script
+// starting again behaves the same either way.
+static catnip_thread *catnip_target_find_thread(catnip_target *target, catnip_thread_fnptr entrypoint) {
+  catnip_runtime *runtime = target->runtime;
+  catnip_i32_t numThreads = CATNIP_LIST_LENGTH(&runtime->threads, catnip_thread *);
+
+  for (catnip_i32_t i = 0; i < numThreads; ++i) {
+    catnip_thread *thread = CATNIP_LIST_GET(&runtime->threads, catnip_thread *, i);
+
+    if (thread->target == target &&
+        thread->entrypoint == entrypoint &&
+        thread->status != CATNIP_THREAD_STATUS_TERMINATED) {
+      return thread;
+    }
+  }
+
+  return CATNIP_NULL;
+}
+
+void catnip_target_start_thread(catnip_target *target, catnip_thread_fnptr entrypoint, catnip_list *threadList, catnip_ui32_t mode) {
+  if (mode == CATNIP_THREAD_START_RESTART) {
+    catnip_thread *existing = catnip_target_find_thread(target, entrypoint);
+
+    if (existing != CATNIP_NULL) {
+      if (existing == existing->runtime->current_thread) {
+        // This is the running script broadcasting its own message. Its frames
+        // are live until the call returns, so ask the tick loop to restart it
+        // then; the rest of the current run plays out, as it does in
+        // scratch-vm, where the old thread finishes its step.
+        existing->restart_pending = CATNIP_TRUE;
+      } else {
+        catnip_thread_restart(existing);
+      }
+
+      if (threadList != CATNIP_NULL) {
+        CATNIP_LIST_ADD(threadList, catnip_thread *, existing);
+        catnip_thread_ref(existing);
+      }
+
+      return;
+    }
+  }
+
   catnip_thread *newThread = catnip_thread_new(target, entrypoint);
 
   if (threadList != CATNIP_NULL) {
     CATNIP_LIST_ADD(threadList, catnip_thread *, newThread);
     catnip_thread_ref(newThread);
   }
-
-  target = target->next_sprite;
 }
 
 void catnip_target_set_xy(catnip_target* target, catnip_f64_t x, catnip_f64_t y) {

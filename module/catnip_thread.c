@@ -13,6 +13,8 @@ catnip_thread *catnip_thread_new(catnip_target *target, catnip_thread_fnptr entr
   thread->function = entrypoint;
   thread->target = target;
   thread->status = CATNIP_THREAD_STATUS_RUNNING;
+  thread->entrypoint = entrypoint;
+  thread->restart_pending = CATNIP_FALSE;
 
   thread->stack_start = catnip_mem_alloc(INITIAL_STACK_SIZE * sizeof(catnip_value));
   thread->stack_ptr = thread->stack_start;
@@ -60,6 +62,17 @@ void catnip_thread_free_stack(catnip_thread *thread) {
   thread->stack_end = CATNIP_NULL;
 }
 
+void catnip_thread_restart(catnip_thread *thread) {
+  CATNIP_ASSERT(thread != CATNIP_NULL);
+
+  // The suspended run's frames are everything between stack_start and
+  // stack_ptr; dropping them puts the thread exactly where catnip_thread_new
+  // left it, so the next dispatch runs the entry point as a fresh start.
+  thread->function = thread->entrypoint;
+  thread->stack_ptr = thread->stack_start;
+  thread->status = CATNIP_THREAD_STATUS_RUNNING;
+}
+
 void catnip_thread_yield(catnip_thread *thread, catnip_thread_fnptr dst) {
   CATNIP_ASSERT(thread != CATNIP_NULL);
   CATNIP_ASSERT(dst != CATNIP_NULL);
@@ -97,7 +110,9 @@ void catnip_thread_stop_all(catnip_thread *thread) {
   catnip_thread_terminate_other_threads(thread, CATNIP_FALSE);
 
   // The caller goes last: it still has a frame on the stack that has to return
-  // to the runtime before its stack can be freed.
+  // to the runtime before its stack can be freed. A restart this thread asked
+  // for earlier in the same run is cancelled too: it asked to stop.
+  thread->restart_pending = CATNIP_FALSE;
   catnip_thread_terminate(thread);
 }
 

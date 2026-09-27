@@ -19,6 +19,7 @@ catnip_runtime *catnip_runtime_new() {
 
   CATNIP_LIST_INIT(&rt->threads, catnip_thread *, 8);
   rt->num_active_threads = 0;
+  rt->current_thread = CATNIP_NULL;
 
   rt->gc_page_index = -1;
   rt->gc_page = CATNIP_NULL;
@@ -87,8 +88,18 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
 
       catnip_i32_t lc = 0;
 
+      runtime->current_thread = thread;
+
       while (thread->status == CATNIP_THREAD_STATUS_RUNNING) {
         thread->function(thread);
+
+        // A script that broadcast the message it is itself listening to asked
+        // for this thread to restart while the call above was live; the stack
+        // is safe to drop now that the call has returned.
+        if (thread->restart_pending) {
+          thread->restart_pending = CATNIP_FALSE;
+          catnip_thread_restart(thread);
+        }
 
         if (++lc > 100000000)
           CATNIP_ASSERT(CATNIP_FALSE);
@@ -99,6 +110,8 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
         if (catnip_import_perf_time() >= runtime->tick_deadline)
           break;
       }
+
+      runtime->current_thread = CATNIP_NULL;
 
       if (thread->status != CATNIP_THREAD_STATUS_TERMINATED)
         ++runtime->num_active_threads;

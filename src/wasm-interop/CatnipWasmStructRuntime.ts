@@ -4,6 +4,7 @@ import { CatnipWasmStructRandomState } from "./CatnipWasmStructRandomState";
 import { CatnipWasmPtrRuntimeGcStats } from "./CatnipWasmStructRuntimeGcStats";
 import { CatnipWasmPtrSprite } from "./CatnipWasmStructSprite";
 import { CatnipWasmPtrTarget } from "./CatnipWasmStructTarget";
+import { CatnipWasmPtrThread } from "./CatnipWasmStructThread";
 import { WasmArray, WasmBool32, WasmFloat64, WasmInt32, WasmPtr, WasmPtrVoid, WasmStruct, WasmUInt32, WasmUInt64 } from "./wasm-types";
 
 export const CatnipWasmStructRuntime = new WasmStruct("catnip_runtime", {
@@ -40,4 +41,6 @@ export const CatnipWasmStructRuntime = new WasmStruct("catnip_runtime", {
 
     gc_alloc_since_last_gc: WasmUInt32,
     gc_alloc_threshold: WasmUInt32,
+
+    current_thread: CatnipWasmPtrThread,
 });

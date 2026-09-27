@@ -2,7 +2,7 @@ import { CatnipCompiler } from "../CatnipCompiler";
 import { CatnipCompilerSubsystem } from "../CatnipCompilerSubsystem";
 import { CatnipIrScriptBroadcastTrigger } from "../ir/event/broadcast_trigger";
 import { SpiderFunction, SpiderFunctionDefinition, SpiderNumberType, SpiderOpcodes } from "wasm-spider";
-import { CatnipTriggerFunctionGenerator } from "../CatnipTriggerGenerator";
+import { CatnipTriggerFunctionGenerator, CATNIP_THREAD_START_RESTART } from "../CatnipTriggerGenerator";
 
 interface BroadcastTriggerInfo {
     triggerGenerator: CatnipTriggerFunctionGenerator,
@@ -27,7 +27,9 @@ export class CatnipCompilerBroadcastSubsystem extends CatnipCompilerSubsystem {
         if (broadcastInfo === undefined) {
             broadcastInfo = {
                 broadcastName: name,
-                triggerGenerator: new CatnipTriggerFunctionGenerator(this.compiler, true)
+                // scratch-vm's "when I receive" hats restart their thread when
+                // the message arrives again (restartExistingThreads: true).
+                triggerGenerator: new CatnipTriggerFunctionGenerator(this.compiler, true, CATNIP_THREAD_START_RESTART)
             };
             this._broadcastTriggers.set(name, broadcastInfo);
         }

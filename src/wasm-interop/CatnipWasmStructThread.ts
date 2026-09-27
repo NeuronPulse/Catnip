@@ -1,5 +1,5 @@
 import { CatnipWasmPtrTarget } from "./CatnipWasmStructTarget";
-import { WasmPtr, WasmStruct, WasmUInt32, WasmPtrVoid } from "./wasm-types";
+import { WasmBool32, WasmPtr, WasmStruct, WasmUInt32, WasmPtrVoid } from "./wasm-types";
 
 export const CatnipWasmStructThread = new WasmStruct("catnip_thread", {
     
@@ -7,6 +7,9 @@ export const CatnipWasmStructThread = new WasmStruct("catnip_thread", {
     target: CatnipWasmPtrTarget,
     function: WasmPtrVoid,
     status: WasmUInt32,
+
+    entrypoint: WasmPtrVoid,
+    restart_pending: WasmBool32,
 
     stack_ptr: WasmPtrVoid,
     stack_end: WasmPtrVoid,

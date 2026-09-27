@@ -6,6 +6,10 @@ import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipIrScriptTrigger } from "./CatnipIrScriptTrigger";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 
+/** Mirrors CATNIP_THREAD_START_* in module/catnip_target.h. */
+export const CATNIP_THREAD_START_ALWAYS = 0;
+export const CATNIP_THREAD_START_RESTART = 1;
+
 /**
  * Generates a function which starts threads.
  * All triggers are added to it, then it generates a function which
@@ -16,15 +20,17 @@ export class CatnipTriggerFunctionGenerator {
     public readonly triggers: Map<CatnipSpriteID, CatnipIrScriptTrigger[]>;
     public readonly triggerFunction: SpiderFunctionDefinition;
     public readonly writeThreadList: boolean;
+    public readonly startMode: number;
 
     private _generated: boolean;
 
-    public constructor(compiler: CatnipCompiler, writeThreadList: boolean) {
+    public constructor(compiler: CatnipCompiler, writeThreadList: boolean, startMode: number) {
         this.compiler = compiler;
         this.triggers = new Map();
         this.triggerFunction = this.compiler.spiderModule.createFunction();
         this._generated = false;
         this.writeThreadList = writeThreadList;
+        this.startMode = startMode;
 
         if (this.writeThreadList) {
             this.triggerFunction.addParameter(SpiderNumberType.i32);
@@ -88,7 +94,8 @@ export class CatnipTriggerFunctionGenerator {
                                 ifTrue.emitConstant(SpiderNumberType.i32, trigger.ir.entrypoint.functionTableIndex);
                                 if (this.writeThreadList) ifTrue.emit(SpiderOpcodes.local_get, threadListPtrVarRef);
                                 else ifTrue.emitConstant(SpiderNumberType.i32, 0);
-                                ifTrue.emit(SpiderOpcodes.call, this.compiler.getRuntimeFunction("catnip_target_start_new_thread"));
+                                ifTrue.emitConstant(SpiderNumberType.i32, this.startMode);
+                                ifTrue.emit(SpiderOpcodes.call, this.compiler.getRuntimeFunction("catnip_target_start_thread"));
                             }
                             // Skip to the end of "innerBlock"
                             ifTrue.emit(SpiderOpcodes.br, 1);

@@ -2,7 +2,7 @@ import { CatnipEventID } from "../../CatnipEvents";
 import { CatnipCompiler } from "../CatnipCompiler";
 import { CatnipCompilerSubsystem } from "../CatnipCompilerSubsystem";
 import { CatnipIrScriptEventTrigger } from "../ir/core/event_trigger";
-import { CatnipTriggerFunctionGenerator } from "../CatnipTriggerGenerator";
+import { CatnipTriggerFunctionGenerator, CATNIP_THREAD_START_RESTART } from "../CatnipTriggerGenerator";
 
 export class CatnipCompilerEventTriggerSubsystem extends CatnipCompilerSubsystem {
     private readonly _triggers: Map<CatnipEventID, CatnipTriggerFunctionGenerator>;
@@ -16,7 +16,10 @@ export class CatnipCompilerEventTriggerSubsystem extends CatnipCompilerSubsystem
         let eventInfo = this._triggers.get(trigger.inputs.id);
 
         if (eventInfo === undefined) {
-            eventInfo = new CatnipTriggerFunctionGenerator(this.compiler, false);
+            // Every event hat Catnip implements restarts its thread when the
+            // event fires again (flag clicked, sprite clicked, ...), the way
+            // scratch-vm's getHats declares them.
+            eventInfo = new CatnipTriggerFunctionGenerator(this.compiler, false, CATNIP_THREAD_START_RESTART);
             this._triggers.set(trigger.inputs.id, eventInfo);
         }
 

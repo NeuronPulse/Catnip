@@ -60,8 +60,19 @@ struct catnip_target {
     catnip_i32_t tempo;
 };
 
+/* How catnip_target_start_thread treats a script that is already running on
+   the target. Mirrors the restartExistingThreads flag scratch-vm reads from
+   each hat's block info (see scratch3_event.js getHats). */
+#define CATNIP_THREAD_START_ALWAYS 0
+#define CATNIP_THREAD_START_RESTART 1
+
 catnip_target *catnip_target_new(struct catnip_runtime *runtime, catnip_sprite *sprite);
-void catnip_target_start_new_thread(catnip_target *target, catnip_thread_fnptr entrypoint, catnip_list *threadList);
+/* Starts the script at entrypoint on target. With CATNIP_THREAD_START_RESTART
+   a script that is already running is restarted instead of duplicated, the way
+   scratch-vm restarts the thread of a "when I receive" hat when its message
+   arrives again. The thread (the restarted one, or the new one) is appended to
+   threadList when it is not null, with a reference for the list to hold. */
+void catnip_target_start_thread(catnip_target *target, catnip_thread_fnptr entrypoint, catnip_list *threadList, catnip_ui32_t mode);
 void catnip_target_set_xy(catnip_target* target, catnip_f64_t x, catnip_f64_t y);
 
 #endif

@@ -22,6 +22,15 @@ struct catnip_thread {
   catnip_thread_fnptr function;
   catnip_thread_status status;
 
+  // The script this thread was started from: the function the thread begins
+  // at. Kept so a later trigger can find the thread of the same script and
+  // restart it instead of starting a second one (see catnip_target_start_thread).
+  catnip_thread_fnptr entrypoint;
+  // Set when a script broadcasts the message it is itself listening to: the
+  // thread is in the middle of a call, so its restart waits until the call
+  // returns (the tick loop applies it, see catnip_runtime_tick).
+  catnip_bool_t restart_pending;
+
   catnip_value *stack_ptr;
   catnip_value *stack_end;
   catnip_value *stack_start;
@@ -35,6 +44,10 @@ struct catnip_thread {
 };
 
 catnip_thread *catnip_thread_new(catnip_target *target, catnip_thread_fnptr entrypoint);
+/* Throws the thread's current run away and starts its script over from the
+   entry point. Only safe when the thread is not executing: its frames above
+   stack_start are dropped, so the suspended run never resumes. */
+void catnip_thread_restart(catnip_thread *thread);
 void catnip_thread_yield(catnip_thread *thread, catnip_thread_fnptr dst);
 void catnip_thread_terminate(catnip_thread *thread);
 /* Stops every thread, including the one that asked. The caller must return

@@ -107,6 +107,12 @@ struct catnip_runtime {
 
     catnip_ui32_t gc_alloc_since_last_gc;
     catnip_ui32_t gc_alloc_threshold;
+
+    /* The thread whose script is on the call stack right now, or null between
+       dispatches. A trigger that restarts this thread cannot touch its stack
+       until the call returns, so it sets thread->restart_pending instead
+       (see catnip_target_start_thread). */
+    catnip_thread *current_thread;
 };
 
 catnip_runtime *catnip_runtime_new();
