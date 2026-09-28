@@ -21,6 +21,8 @@ catnip_runtime *catnip_runtime_new() {
   rt->num_active_threads = 0;
   rt->current_thread = CATNIP_NULL;
 
+  rt->counter = 0;
+
   rt->gc_page_index = -1;
   rt->gc_page = CATNIP_NULL;
   CATNIP_LIST_INIT(&rt->gc_pages, catnip_gc_page *, 4);

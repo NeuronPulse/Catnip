@@ -620,7 +620,20 @@ type SB3BlockTypeDefinition = {
         inputs: {
             "DURATION": ProjectSB3Input
         }
-    }
+    },
+    "control_wait_until": {
+        inputs: {
+            "CONDITION": ProjectSB3Input
+        }
+    },
+    "control_all_at_once": {
+        inputs: {
+            "SUBSTACK": ProjectSB3Input
+        }
+    },
+    "control_get_counter": {},
+    "control_incr_counter": {},
+    "control_clear_counter": {}
 
     "operator_add": {
         inputs: {

@@ -43,4 +43,6 @@ export const CatnipWasmStructRuntime = new WasmStruct("catnip_runtime", {
     gc_alloc_threshold: WasmUInt32,
 
     current_thread: CatnipWasmPtrThread,
+
+    counter: WasmFloat64,
 });

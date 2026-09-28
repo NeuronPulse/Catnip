@@ -113,6 +113,11 @@ struct catnip_runtime {
        until the call returns, so it sets thread->restart_pending instead
        (see catnip_target_start_thread). */
     catnip_thread *current_thread;
+
+    /* The Scratch 2.0 compatibility counter behind control_get/incr/clear_
+       counter; a plain number, kept on the runtime because any script may
+       touch it. */
+    catnip_f64_t counter;
 };
 
 catnip_runtime *catnip_runtime_new();
