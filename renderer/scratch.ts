@@ -1,5 +1,6 @@
 import RenderWebGL from "scratch-render";
 import {
+    CatnipBubbleUpdate,
     DRAW_STATE,
     DRAW_STATE_STRIDE,
     ICatnipRenderer,
@@ -58,6 +59,14 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
 
     private _penDrawableID: number | null = null;
     private _penSkinID: number | null = null;
+
+    /** Current say/think bubble per target index, as the worker sent it. */
+    private _bubbles: Map<number, { type: number, text: string }> = new Map();
+    private _bubbleEls: Map<number, HTMLDivElement> = new Map();
+    // Stage-space draw state per target, kept for bubble placement.
+    private _drawX: number[] = [];
+    private _drawY: number[] = [];
+    private _drawVisible: boolean[] = [];
 
     public constructor() {
         this.canvasElement = document.getElementById("canvas") as HTMLCanvasElement;
@@ -143,6 +152,87 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
     }
 
 
+    /**
+     * Applies bubble updates for targets whose bubble_gen changed: one DOM
+     * overlay node per talking target, positioned over the canvas from the
+     * latest draw state and hidden with its sprite.
+     */
+    public bubble(data: CatnipBubbleUpdate[]): void {
+        for (const update of data) {
+            if (update.type === 0 || update.text === "")
+                this._bubbles.delete(update.index);
+            else
+                this._bubbles.set(update.index, { type: update.type, text: update.text });
+        }
+
+        for (const [index, bubble] of this._bubbles) {
+            if (this._bubbleEls.has(index)) continue;
+            const el = document.createElement("div");
+            el.className = "catnip-bubble";
+            el.style.position = "fixed";
+            el.style.pointerEvents = "none";
+            el.style.background = "#fff";
+            el.style.border = "1.5px solid rgba(0, 0, 0, 0.35)";
+            el.style.color = "#575e75";
+            el.style.font = "14px/1.35 \"Helvetica Neue\", Helvetica, Arial, sans-serif";
+            el.style.padding = "4px 9px";
+            el.style.maxWidth = "340px";
+            el.style.whiteSpace = "pre-wrap";
+            el.style.wordBreak = "break-word";
+            el.style.zIndex = "10";
+            el.textContent = bubble.text;
+            document.body.appendChild(el);
+            this._bubbleEls.set(index, el);
+        }
+
+        for (const [index, el] of this._bubbleEls) {
+            if (this._bubbles.has(index)) continue;
+            el.remove();
+            this._bubbleEls.delete(index);
+        }
+
+        this._layoutBubbles();
+    }
+
+    /** Moves each bubble above its sprite (flipping below near the top edge). */
+    private _layoutBubbles(): void {
+        const rect = this.canvasElement.getBoundingClientRect();
+        const scaleX = rect.width / 480;
+        const scaleY = rect.height / 360;
+
+        for (const [index, bubble] of this._bubbles) {
+            const el = this._bubbleEls.get(index);
+            if (el === undefined) continue;
+
+            el.textContent = bubble.text;
+
+            if (this._drawVisible[index] === false) {
+                el.style.display = "none";
+                continue;
+            }
+
+            el.style.display = "block";
+            // Scratch's bubble tails: a pointed box for say, a rounder one for think.
+            el.style.borderRadius = bubble.type === 2 ? "18px" : "8px";
+
+            const centerX = rect.left + (240 + (this._drawX[index] ?? 0)) * scaleX;
+            const centerY = rect.top + (180 - (this._drawY[index] ?? 0)) * scaleY;
+
+            const width = el.offsetWidth;
+            const height = el.offsetHeight;
+            let left = centerX - width / 2;
+            left = Math.max(rect.left, Math.min(left, rect.right - width));
+
+            // Above the sprite; flip below when the top would clip.
+            let top = centerY - height / 2 - (30 + height / 2) * scaleY;
+            if (top < rect.top + 2)
+                top = centerY + height / 2 + 30 * scaleY;
+
+            el.style.left = `${left}px`;
+            el.style.top = `${top}px`;
+        }
+    }
+
     /** Applies one packed draw state (see DRAW_STATE). */
     public applyDrawState(data: Float32Array): void {
         const targetCount = Math.floor(data.length / DRAW_STATE_STRIDE);
@@ -189,7 +279,13 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
                     data[base + DRAW_STATE.effect_color + e]
                 );
             }
+
+            this._drawX[i] = x;
+            this._drawY[i] = y;
+            this._drawVisible[i] = data[base + DRAW_STATE.visible] !== 0;
         }
+
+        if (this._bubbles.size > 0) this._layoutBubbles();
     }
 
     /** Stages the pen layer on first use: pen drawing arrives as batches of segments. */

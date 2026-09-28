@@ -31,6 +31,7 @@ type ToMainMessage =
     | { kind: "penErase" }
     | { kind: "drawState", data: Float32Array }
     | { kind: "layer", data: Int32Array }
+    | { kind: "bubble", data: import("../src/runtime/ICatnipRenderer").CatnipBubbleUpdate[] }
     | { kind: "frame" }
     | { kind: "targets", targets: TargetInfo[] }
     | { kind: "costumes", costumes: CostumeAsset[] }
@@ -72,6 +73,11 @@ class RemoteRenderer implements ICatnipRenderer {
     public layer(data: Int32Array): void {
         // Only sent when a layer op moved something; still a fresh buffer.
         workerScope.postMessage({ kind: "layer", data }, [data.buffer]);
+    }
+
+    public bubble(data: import("../src/runtime/ICatnipRenderer").CatnipBubbleUpdate[]): void {
+        // Sent only when a bubble changed; small JSON payloads.
+        workerScope.postMessage({ kind: "bubble", data });
     }
 
     public frame(): void {

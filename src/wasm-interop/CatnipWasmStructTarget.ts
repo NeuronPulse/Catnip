@@ -66,6 +66,14 @@ export const CatnipWasmStructTarget = new WasmStruct("catnip_target", {
     glide_duration: WasmFloat64,
     layer_rank: WasmInt32,
     layer_gen: WasmUInt32,
+    bubble_text: WasmPtrVoid,
+    bubble_type: WasmUInt32,
+    bubble_gen: WasmUInt32,
 });
+
+/** Mirrors CATNIP_BUBBLE_* in module/catnip_looks.h. */
+export const CATNIP_BUBBLE_NONE = 0;
+export const CATNIP_BUBBLE_SAY = 1;
+export const CATNIP_BUBBLE_THINK = 2;
 
 export const CatnipWasmPtrTarget = new WasmPtr(CatnipWasmStructTarget);

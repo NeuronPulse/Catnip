@@ -65,4 +65,25 @@ void catnip_looks_goto_front(catnip_target *target);
 void catnip_looks_goto_back(catnip_target *target);
 void catnip_looks_change_layer(catnip_target *target, catnip_f64_t n);
 
+/* Say/think bubbles. bubble_type is one of these; an empty message clears
+   the bubble the way Scratch3LooksBlocks._updateBubble does with ''. */
+#define CATNIP_BUBBLE_NONE 0
+#define CATNIP_BUBBLE_SAY 1
+#define CATNIP_BUBBLE_THINK 2
+
+/* say / think: replaces the target's bubble text (truncated to Scratch's
+   330-character limit) and bumps bubble_gen. */
+void catnip_looks_say(catnip_hstring *text, catnip_ui32_t type, catnip_target *target);
+
+/* The transient usage id behind sayforsecs/thinkforsecs: clears the bubble
+   only when no other say/think happened meanwhile (Scratch compares
+   usageId). */
+void catnip_looks_clear_if_unchanged(catnip_ui32_t usage, catnip_target *target);
+
+/* Formats a number the way Scratch3LooksBlocks._formatBubbleText does —
+   non-integers with |x| >= 0.01 show exactly two decimals, everything else
+   the shortest round-trip form. Strings skip this (they arrive already as
+   hstrings). */
+catnip_hstring *catnip_looks_bubble_format(catnip_f64_t value, catnip_runtime *runtime);
+
 #endif

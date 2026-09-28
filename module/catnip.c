@@ -352,3 +352,15 @@ void CATNIP_EXPORT(catnip_looks_goto_back)(catnip_target *target) {
 void CATNIP_EXPORT(catnip_looks_change_layer)(catnip_f64_t n, catnip_target *target) {
   catnip_looks_change_layer(target, n);
 }
+
+void CATNIP_EXPORT(catnip_looks_say)(catnip_hstring *text, catnip_ui32_t type, catnip_target *target) {
+  catnip_looks_say(text, type, target);
+}
+
+void CATNIP_EXPORT(catnip_looks_clear_if_unchanged)(catnip_ui32_t usage, catnip_target *target) {
+  catnip_looks_clear_if_unchanged(usage, target);
+}
+
+catnip_hstring *CATNIP_EXPORT(catnip_looks_bubble_format)(catnip_f64_t value, catnip_runtime *runtime) {
+  return catnip_looks_bubble_format(value, runtime);
+}

@@ -5,7 +5,9 @@ import { CATNIP_DEFAULT_STEP_RATE, CatnipRuntimeModule, catnipTickBudgetMs } fro
 import { CatnipWasmStructRuntime } from "../wasm-interop/CatnipWasmStructRuntime";
 import { WasmStructValue, WasmStructWrapper } from "../wasm-interop/wasm-types";
 import { CatnipRuntimeGcStats, CatnipWasmStructRuntimeGcStats } from '../wasm-interop/CatnipWasmStructRuntimeGcStats';
-import { DRAW_STATE, DRAW_STATE_STRIDE } from "./ICatnipRenderer";
+import { CatnipBubbleUpdate, DRAW_STATE, DRAW_STATE_STRIDE } from "./ICatnipRenderer";
+import { CatnipWasmStructHeapString } from "../wasm-interop/CatnipWasmStructHeapString";
+import UTF16 from "../utf16";
 import { CATNIP_TARGET_FLAG_IS_VISIBLE } from "../wasm-interop/CatnipWasmStructTarget";
 
 export type CatnipProjectModuleEvent<TEvnetID extends CatnipEventID = CatnipEventID> = { id: TEvnetID, exportName: string };
@@ -97,6 +99,10 @@ export class CatnipProjectModule {
         // their own message whenever a target's layer_gen moved.
         if (this._layerGenChanged())
             this.runtimeModule.renderer.layer(this._serializeLayers());
+        // Bubbles likewise go out only when a target's bubble_gen moved.
+        const bubbleUpdates = this._serializeBubbles();
+        if (bubbleUpdates.length > 0)
+            this.runtimeModule.renderer.bubble(bubbleUpdates);
         // Flush pen lines
         this.runtimeModule.functions.catnip_runtime_render_pen_flush(this.runtimeInstance.ptr);
         // Call the renderer
@@ -111,6 +117,60 @@ export class CatnipProjectModule {
     /** The layer rank of every target (index 0 = stage), sprites 1..n back to front. */
     public getLayers(): Int32Array {
         return this._serializeLayers();
+    }
+
+    /** One target's say/think bubble, as the renderer would show it. */
+    public getBubble(index: number): { type: number, text: string } {
+        const sprites = Array.from(this.project.sprites);
+        if (index < 0 || index >= sprites.length)
+            throw new Error(`No target at index ${index}.`);
+
+        const target = sprites[index].defaultTarget.structWrapper;
+        const ptr = target.getMember("bubble_text");
+        if (ptr === 0)
+            return { type: 0, text: "" };
+
+        return { type: target.getMember("bubble_type"), text: this._readHString(ptr) };
+    }
+
+    /** Decodes an hstring living in wasm memory (header + UTF-16 units). */
+    private _readHString(ptr: number): string {
+        const headerSize = CatnipWasmStructHeapString.size;
+        const bytelen = this.runtimeModule.memory.getUint32(
+            ptr + CatnipWasmStructHeapString.getMemberOffset("bytelen"), true);
+        const charBytes = bytelen - headerSize;
+        if (charBytes <= 0) return "";
+
+        const bytes = this.runtimeModule.memoryBytes;
+        return UTF16.decode(bytes.buffer.slice(ptr + headerSize, ptr + headerSize + charBytes));
+    }
+
+    private _bubbleGenCache: Int32Array | null = null;
+
+    /** Bubble changes since the last call — empty when nothing moved. */
+    private _serializeBubbles(): CatnipBubbleUpdate[] {
+        const sprites = Array.from(this.project.sprites);
+        const gens = new Int32Array(sprites.length);
+        const updates: CatnipBubbleUpdate[] = [];
+
+        for (let i = 0; i < sprites.length; i++) {
+            const target = sprites[i].defaultTarget.structWrapper;
+            gens[i] = target.getMember("bubble_gen");
+
+            if (this._bubbleGenCache !== null && this._bubbleGenCache[i] === gens[i])
+                continue;
+
+            const ptr = target.getMember("bubble_text");
+            updates.push({
+                index: i,
+                type: ptr === 0 ? 0 : target.getMember("bubble_type"),
+                text: ptr === 0 ? "" : this._readHString(ptr),
+            });
+        }
+
+        if (this._bubbleGenCache === null || !this._bubbleGenCache.every((g, i) => g === gens[i]))
+            this._bubbleGenCache = gens;
+        return updates;
     }
 
     private _serializeLayers(): Int32Array {

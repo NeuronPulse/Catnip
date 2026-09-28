@@ -6,6 +6,7 @@ type WorkerMessage =
     | { kind: "penErase" }
     | { kind: "drawState", data: Float32Array }
     | { kind: "layer", data: Int32Array }
+    | { kind: "bubble", data: import("../src/runtime/ICatnipRenderer").CatnipBubbleUpdate[] }
     | { kind: "frame" }
     | { kind: "targets", targets: CatnipTargetRenderInfo[] }
     | { kind: "costumes", costumes: CatnipCostumeAsset[] }
@@ -129,6 +130,10 @@ async function main() {
                 break;
             case "layer":
                 renderer.applyLayer(message.data);
+                drawPending = true;
+                break;
+            case "bubble":
+                renderer.bubble(message.data);
                 drawPending = true;
                 break;
             case "targets":

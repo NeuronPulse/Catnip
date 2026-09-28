@@ -5,7 +5,7 @@ import { op_change_effect, op_clear_effects, op_set_effect } from "./effects";
 import { op_get_costume } from "./get_costume";
 import { op_change_layer, op_goto_frontback } from "./layers";
 import { op_next_costume } from "./next_costume";
-import "./say";
+import { op_say, op_sayforsecs } from "./say";
 import { op_change_size, op_get_size, op_set_size, op_stretch_noop } from "./size";
 import { op_hide, op_hide_all_sprites, op_show } from "./show_hide";
 import { op_switch_to_costume } from "./switch_to_costume";
@@ -42,4 +42,8 @@ export default {
     looks_clear_effects: op_clear_effects,
     looks_goto_frontback: op_goto_frontback,
     looks_change_layer: op_change_layer,
+    looks_say: op_say,
+    looks_think: op_say,
+    looks_sayforsecs: op_sayforsecs,
+    looks_thinkforsecs: op_sayforsecs,
 };

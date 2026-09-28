@@ -27,6 +27,16 @@ export const DRAW_STATE = {
     rotation_style: 13,
 } as const;
 
+/** One target's say/think bubble as it crosses the worker → page boundary. */
+export type CatnipBubbleUpdate = {
+    /** Target index in project.json order (0 = stage). */
+    index: number;
+    /** CATNIP_BUBBLE_* — 0 none, 1 say, 2 think. */
+    type: number;
+    /** Empty when the bubble was cleared. */
+    text: string;
+};
+
 export interface ICatnipRenderer {
 
     penDrawLines(data: Float32Array, length: number): void;
@@ -44,6 +54,13 @@ export interface ICatnipRenderer {
      * the receiver re-sorts the drawables by rank.
      */
     layer(data: Int32Array): void;
+
+    /**
+     * Bubble updates for targets whose bubble_gen changed: text and kind per
+     * target (0 = no bubble). Sent only on change; the receiver swaps DOM
+     * overlay nodes.
+     */
+    bubble(data: CatnipBubbleUpdate[]): void;
 
     frame(): void;
 

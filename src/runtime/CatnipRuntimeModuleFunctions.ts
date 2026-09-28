@@ -99,6 +99,12 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.i32], undefined),
     catnip_looks_change_layer: fn<[n: SpiderNumberType.f64, target: SpiderNumberType.i32]>
         ([SpiderNumberType.f64, SpiderNumberType.i32], undefined),
+    catnip_looks_say: fn<[text: SpiderNumberType.i32, type: SpiderNumberType.i32, target: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], undefined),
+    catnip_looks_clear_if_unchanged: fn<[usage: SpiderNumberType.i32, target: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
+    catnip_looks_bubble_format: fn<[value: SpiderNumberType.f64, runtime: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.f64, SpiderNumberType.i32], SpiderNumberType.i32),
 
     catnip_thread_new: fn<[target: SpiderNumberType.i32, fnprt: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),

@@ -1,7 +1,9 @@
 
 import { run } from "../src/index";
 import fs from "node:fs/promises";
-import { registerSB3CommandBlock } from "../src/sb3_ops";
+import { registerSB3CommandBlock, sb3_ops } from "../src/sb3_ops";
+import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp, CatnipOp } from "../src/ops/CatnipOp";
+import { CatnipIr } from "../src/compiler/CatnipIr";
 import { op_log } from "../src/ops/core/log";
 import { op_const } from "../src/ops/core/const";
 import { op_callback_command } from '../src/ops/core/callback_command';
@@ -12,6 +14,21 @@ import { DRAW_STATE, DRAW_STATE_STRIDE } from "../src/runtime/ICatnipRenderer";
 import { test } from "tap"
 
 
+
+// The production `say` deserializer, captured once: the harness wraps it
+// (real bubble write first, then the protocol parse of the same text)
+// instead of replacing it, because fixtures assert bubbles through the
+// protocol while their own `say` blocks must keep producing real ones.
+const productionSay = sb3_ops.commandBlocks.get("looks_say")!;
+const op_say_and_report = new class extends CatnipCommandOpType<{ commands: CatnipCommandList }> {
+    public *getInputsAndSubstacks(ir: CatnipIr, inputs: { commands: CatnipCommandList }): IterableIterator<CatnipOp> {
+        for (const command of inputs.commands) yield command;
+    }
+
+    public generateIr(ctx: any, inputs: { commands: CatnipCommandList }): void {
+        ctx.emitCommands(inputs.commands);
+    }
+};
 
 async function main() {
 
@@ -44,7 +61,10 @@ async function main() {
             const pendingEvents: [CatnipEventID, number][] = [];
 
             registerSB3CommandBlock("looks_say", (ctx, block) =>
-                op_callback_command.create({
+                op_say_and_report.create({
+                    commands: [
+                        productionSay(ctx, block),
+                        op_callback_command.create({
                     name: "test_callback",
                     inputs: [[ctx.readInput(block.inputs.MESSAGE), CatnipValueFormat.I32_HSTRING]],
                     callback: (message) => {
@@ -129,6 +149,30 @@ async function main() {
                                     t.fail(`${message}: rank ${ranks[front]} <= ${ranks[behind]}`);
                                 break;
                             }
+                            // "bubble <target> <say|think|none> [text]"
+                            // asserts a target's live say/think bubble.
+                            case "bubble": {
+                                const marker = arg.search(/\s/);
+                                const targetIndex = Number(arg.substring(0, marker < 0 ? arg.length : marker));
+                                const rest = marker < 0 ? "" : arg.substring(marker + 1);
+                                const spaceAt = rest.search(/\s/);
+                                const kind = spaceAt < 0 ? rest : rest.substring(0, spaceAt);
+                                const text = spaceAt < 0 ? "" : rest.substring(spaceAt + 1);
+                                if (projectModule === null || Number.isNaN(targetIndex)
+                                    || !["say", "think", "none"].includes(kind)
+                                    || (kind !== "none" && text === "")) {
+                                    t.fail(`Bad bubble protocol word: ${message}`);
+                                    break;
+                                }
+                                const bubble = projectModule.getBubble(targetIndex);
+                                const expectedType = kind === "say" ? 1 : kind === "think" ? 2 : 0;
+                                const expectedText = kind === "none" ? "" : text;
+                                if (bubble.type === expectedType && bubble.text === expectedText)
+                                    t.pass(message);
+                                else
+                                    t.fail(`${message}: expected ${expectedType} "${expectedText}", got ${bubble.type} "${bubble.text}"`);
+                                break;
+                            }
                             case "comment":
                                 t.comment(message);
                                 break;
@@ -137,8 +181,9 @@ async function main() {
                                 break;
                         }
                     }
-                }
-                ), true);
+                }),
+                    ],
+                }), true);
 
             const project = await run(catnipModule, projectFile);
             projectModule = await project.compile({

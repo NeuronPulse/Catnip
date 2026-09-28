@@ -151,6 +151,17 @@ void gc_iterate_roots(catnip_runtime *runtime, void(*func)(catnip_value*, catnip
       func(&target->variable_table[varIdx], runtime);
     }
 
+    // The say/think bubble text: a raw hstring pointer, so it goes through
+    // the same mark (refcount) and move (relocatable pointer fixup) pass as
+    // any other rooted string, via a synthetic string-tagged value.
+    if (target->bubble_text != CATNIP_NULL) {
+      catnip_value bubbleValue;
+      bubbleValue.parts.lower = (catnip_ui32_t) target->bubble_text;
+      bubbleValue.parts.upper = CATINP_VALUE_STRING_UPPER;
+      func(&bubbleValue, runtime);
+      target->bubble_text = (catnip_hstring *) bubbleValue.parts.lower;
+    }
+
     // TODO Check all the lists
     for (catnip_ui32_t listIdx = 0; listIdx < target->sprite->list_count; listIdx++) {
       

@@ -245,3 +245,71 @@ void catnip_looks_change_layer(catnip_target *target, catnip_f64_t n) {
 
   looks_layer_move(target, looks_layer_position(target) + (catnip_i32_t)n);
 }
+
+/* Say/think bubbles ---------------------------------------------------- */
+
+/* Scratch3LooksBlocks.SAY_BUBBLE_LIMIT. */
+#define CATNIP_BUBBLE_TEXT_LIMIT 330
+
+void catnip_looks_say(catnip_hstring *text, catnip_ui32_t type, catnip_target *target) {
+  /* _updateBubble('') clears the bubble but still bumps the usage id —
+     here the generation counter — which cancels a pending sayforsecs
+     clear, exactly like Scratch's usageId comparison. */
+  if (text == CATNIP_NULL || CATNIP_HSTRING_LENGTH(text) == 0) {
+    target->bubble_text = CATNIP_NULL;
+    target->bubble_type = CATNIP_BUBBLE_NONE;
+    target->bubble_gen++;
+    return;
+  }
+
+  if (CATNIP_HSTRING_LENGTH(text) > CATNIP_BUBBLE_TEXT_LIMIT) {
+    /* JS substr(0, 330) of the formatted text. The source may be shared
+       (a variable's value), so truncate into a fresh copy. */
+    text = catnip_hstring_new(target->runtime, catnip_hstring_get_data(text),
+                              CATNIP_BUBBLE_TEXT_LIMIT);
+  }
+
+  target->bubble_text = text;
+  target->bubble_type = type;
+  target->bubble_gen++;
+}
+
+void catnip_looks_clear_if_unchanged(catnip_ui32_t usage, catnip_target *target) {
+  if (target->bubble_gen != usage) return;
+
+  catnip_looks_say(CATNIP_NULL, CATNIP_BUBBLE_NONE, target);
+}
+
+catnip_hstring *catnip_looks_bubble_format(catnip_f64_t value, catnip_runtime *runtime) {
+  /* _formatBubbleText: non-integers with |x| >= 0.01 display exactly two
+     decimals; integers and tiny magnitudes keep the shortest round-trip
+     form (JS String(number)). */
+  catnip_f64_t a = value < 0 ? -value : value;
+
+  if (a >= 0.01 && CATNIP_F64_FLOOR(value) != value) {
+    catnip_ui64_t scaled = (catnip_ui64_t)(a * 100.0 + 0.5);
+    catnip_ui64_t whole = scaled / 100;
+    catnip_ui32_t frac = (catnip_ui32_t)(scaled % 100);
+
+    catnip_char_t buf[32];
+    catnip_i32_t n = 0;
+
+    if (value < 0) buf[n++] = '-';
+
+    catnip_char_t digits[24];
+    catnip_i32_t d = 0;
+    do {
+      digits[d++] = (catnip_char_t)('0' + (whole % 10));
+      whole /= 10;
+    } while (whole != 0 && d < (catnip_i32_t)sizeof(digits));
+    while (d > 0) buf[n++] = digits[--d];
+
+    buf[n++] = '.';
+    buf[n++] = (catnip_char_t)('0' + (frac / 10));
+    buf[n++] = (catnip_char_t)('0' + (frac % 10));
+
+    return catnip_hstring_new_from_ascii(runtime, buf, (catnip_ui32_t)n);
+  }
+
+  return catnip_numconv_stringify_f64(runtime, value);
+}

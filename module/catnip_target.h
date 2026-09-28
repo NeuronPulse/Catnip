@@ -85,6 +85,14 @@ struct catnip_target {
        renderer to re-sort. */
     catnip_i32_t layer_rank;
     catnip_ui32_t layer_gen;
+
+    /* Say/think bubble: the current text (0 = no bubble), a CATNIP_BUBBLE_*
+       kind, and a generation bumped by every bubble change so frame() can
+       tell the renderer to refresh. The text is a GC root (see
+       gc_iterate_roots). */
+    catnip_hstring *bubble_text;
+    catnip_ui32_t bubble_type;
+    catnip_ui32_t bubble_gen;
 };
 
 /* An axis-aligned box in stage coordinates (y up). */
