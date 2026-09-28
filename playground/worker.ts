@@ -30,6 +30,7 @@ type ToMainMessage =
     | { kind: "penLines", data: Float32Array, length: number }
     | { kind: "penErase" }
     | { kind: "drawState", data: Float32Array }
+    | { kind: "layer", data: Int32Array }
     | { kind: "frame" }
     | { kind: "targets", targets: TargetInfo[] }
     | { kind: "costumes", costumes: CostumeAsset[] }
@@ -66,6 +67,11 @@ class RemoteRenderer implements ICatnipRenderer {
     public drawState(data: Float32Array): void {
         // Fresh buffer every frame; move it rather than copy it.
         workerScope.postMessage({ kind: "drawState", data }, [data.buffer]);
+    }
+
+    public layer(data: Int32Array): void {
+        // Only sent when a layer op moved something; still a fresh buffer.
+        workerScope.postMessage({ kind: "layer", data }, [data.buffer]);
     }
 
     public frame(): void {

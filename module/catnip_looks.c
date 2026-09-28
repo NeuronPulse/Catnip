@@ -149,3 +149,99 @@ catnip_hstring *catnip_looks_backdrop_name(catnip_runtime *runtime) {
 
   return stage->sprite->costumes[stage->costume].name;
 }
+
+/* Layer ops ------------------------------------------------------------- */
+
+static catnip_bool_t looks_is_sprite(catnip_target *target) {
+  return (target->flags & CATNIP_TARGET_FLAG_IS_STAGE) == 0;
+}
+
+static catnip_i32_t looks_layer_count(catnip_runtime *runtime) {
+  catnip_i32_t count = 0;
+  for (catnip_target *t = runtime->targets; t != 0; t = t->next_global)
+    if (looks_is_sprite(t)) count++;
+  return count;
+}
+
+/* Position of `target` among sprites (0 = rearmost), by layer_rank. */
+static catnip_i32_t looks_layer_position(catnip_target *target) {
+  catnip_i32_t pos = 0;
+  for (catnip_target *t = target->runtime->targets; t != 0; t = t->next_global)
+    if (looks_is_sprite(t) && t != target && t->layer_rank < target->layer_rank)
+      pos++;
+  return pos;
+}
+
+/* Moves `target` to position `new_pos` (0 = rearmost sprite): sprites are
+   sorted by layer_rank, the mover is taken out and re-inserted with shift
+   semantics — the same splice scratch-render's setDrawableOrder performs —
+   then every sprite's rank is renumbered 1..n (the stage keeps its json 0)
+   and the mover's layer_gen bumps so frame() tells the renderer. Positions
+   outside [0, n-1] clamp, like the renderer clamps its splice index. */
+static void looks_layer_move(catnip_target *target, catnip_i32_t new_pos) {
+  catnip_runtime *runtime = target->runtime;
+  catnip_i32_t count = looks_layer_count(runtime);
+  if (count == 0) return;
+
+  catnip_target *sorted[count];
+  catnip_i32_t n = 0;
+
+  for (catnip_target *t = runtime->targets; t != 0; t = t->next_global)
+    if (looks_is_sprite(t)) sorted[n++] = t;
+
+  /* Insertion sort by rank; json layer ranks are distinct, ties keep the
+     scan order. */
+  for (catnip_i32_t i = 1; i < n; i++) {
+    catnip_target *v = sorted[i];
+    catnip_i32_t j = i - 1;
+    while (j >= 0 && sorted[j]->layer_rank > v->layer_rank) {
+      sorted[j + 1] = sorted[j];
+      j--;
+    }
+    sorted[j + 1] = v;
+  }
+
+  catnip_i32_t my_pos = 0;
+  while (my_pos < n && sorted[my_pos] != target) my_pos++;
+  if (my_pos >= n) return;
+
+  if (new_pos < 0) new_pos = 0;
+  if (new_pos >= n) new_pos = n - 1;
+
+  catnip_target *moved = sorted[my_pos];
+  if (new_pos < my_pos) {
+    for (catnip_i32_t i = my_pos; i > new_pos; i--) sorted[i] = sorted[i - 1];
+  } else if (new_pos > my_pos) {
+    for (catnip_i32_t i = my_pos; i < new_pos; i++) sorted[i] = sorted[i + 1];
+  }
+  sorted[new_pos] = moved;
+
+  for (catnip_i32_t i = 0; i < n; i++) sorted[i]->layer_rank = i + 1;
+  target->layer_gen++;
+}
+
+void catnip_looks_goto_front(catnip_target *target) {
+  /* RenderedTarget's layer ops are sprites-only; the stage ignores them. */
+  if (!looks_is_sprite(target)) return;
+
+  looks_layer_move(target, 0x7fffffff);
+}
+
+void catnip_looks_goto_back(catnip_target *target) {
+  if (!looks_is_sprite(target)) return;
+
+  looks_layer_move(target, 0);
+}
+
+void catnip_looks_change_layer(catnip_target *target, catnip_f64_t n) {
+  if (!looks_is_sprite(target)) return;
+
+  /* Scratch hands the count straight to the renderer: JS ToInteger turns NaN
+     into 0 and truncates toward zero, and the splice clamps to the list
+     bounds — replicate both so nothing reaches wasm's trapping cast. */
+  if (n != n) n = 0;
+  if (n > 1e9) n = 1e9;
+  if (n < -1e9) n = -1e9;
+
+  looks_layer_move(target, looks_layer_position(target) + (catnip_i32_t)n);
+}

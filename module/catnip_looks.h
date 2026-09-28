@@ -54,4 +54,15 @@ void catnip_looks_next_backdrop(catnip_runtime *runtime);
 catnip_f64_t catnip_looks_backdrop_number(catnip_runtime *runtime);
 catnip_hstring *catnip_looks_backdrop_name(catnip_runtime *runtime);
 
+/* Layer ops: reordering happens among sprites only (RenderedTarget's
+   goToFront/goToBack/goForwardLayers/goBackwardLayers are documented
+   sprites-only; the stage ignores them). layer_rank is a 1-based position
+   within the sprite layer, higher = closer to the viewer; every op renumbers
+   the whole sprite ordering and bumps target->layer_gen so frame() notices.
+   change_layer takes the layer count as scratch passes it (a double: NaN
+   falls back to 0, out-of-range clamps like the renderer's splice). */
+void catnip_looks_goto_front(catnip_target *target);
+void catnip_looks_goto_back(catnip_target *target);
+void catnip_looks_change_layer(catnip_target *target, catnip_f64_t n);
+
 #endif

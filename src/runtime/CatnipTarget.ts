@@ -159,6 +159,11 @@ export class CatnipTarget {
         };
         this.structWrapper.setMember("rotation_style", rotationStyles[desc.rotationStyle]);
 
+        // Scratch's saved z-order: sprites rank 1..n back to front, the
+        // stage's rank 0 stays untouched by every layer op.
+        this.structWrapper.setMember("layer_rank", desc.layerOrder);
+        this.structWrapper.setMember("layer_gen", 0);
+
         let flags = desc.isStage ? CATNIP_TARGET_FLAG_IS_STAGE : 0;
         if (desc.visible) flags |= CATNIP_TARGET_FLAG_IS_VISIBLE;
 

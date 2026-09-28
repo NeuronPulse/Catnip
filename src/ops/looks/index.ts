@@ -3,6 +3,7 @@ import { op_const } from "../core/const";
 import { op_get_backdrop_number_name, op_next_backdrop, op_switch_backdrop } from "./backdrop";
 import { op_change_effect, op_clear_effects, op_set_effect } from "./effects";
 import { op_get_costume } from "./get_costume";
+import { op_change_layer, op_goto_frontback } from "./layers";
 import { op_next_costume } from "./next_costume";
 import "./say";
 import { op_change_size, op_get_size, op_set_size, op_stretch_noop } from "./size";
@@ -39,4 +40,6 @@ export default {
     looks_set_effect: op_set_effect,
     looks_change_effect: op_change_effect,
     looks_clear_effects: op_clear_effects,
+    looks_goto_frontback: op_goto_frontback,
+    looks_change_layer: op_change_layer,
 };

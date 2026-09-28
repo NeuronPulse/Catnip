@@ -77,6 +77,14 @@ struct catnip_target {
     catnip_f64_t glide_end_y;
     catnip_f64_t glide_t0;
     catnip_f64_t glide_duration;
+
+    /* Scratch's z-order among sprites: 1-based position within the sprite
+       layer (higher = closer to the viewer), renumbered 1..n by every layer
+       op; the stage keeps its json value 0 and is never part of the ordering.
+       layer_gen bumps whenever layer_rank moves so frame() can tell the
+       renderer to re-sort. */
+    catnip_i32_t layer_rank;
+    catnip_ui32_t layer_gen;
 };
 
 /* An axis-aligned box in stage coordinates (y up). */

@@ -5,6 +5,7 @@ type WorkerMessage =
     | { kind: "penLines", data: Float32Array, length: number }
     | { kind: "penErase" }
     | { kind: "drawState", data: Float32Array }
+    | { kind: "layer", data: Int32Array }
     | { kind: "frame" }
     | { kind: "targets", targets: CatnipTargetRenderInfo[] }
     | { kind: "costumes", costumes: CatnipCostumeAsset[] }
@@ -125,6 +126,10 @@ async function main() {
                 break;
             case "drawState":
                 renderer.applyDrawState(message.data);
+                break;
+            case "layer":
+                renderer.applyLayer(message.data);
+                drawPending = true;
                 break;
             case "targets":
                 renderer.initTargets(message.targets);

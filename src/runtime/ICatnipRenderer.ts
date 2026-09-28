@@ -38,6 +38,13 @@ export interface ICatnipRenderer {
      */
     drawState(data: Float32Array): void;
 
+    /**
+     * The layer rank of every target, in sprite order (index 0 = stage,
+     * which is never reordered). Sent only when a layer op changed a rank;
+     * the receiver re-sorts the drawables by rank.
+     */
+    layer(data: Int32Array): void;
+
     frame(): void;
 
 }

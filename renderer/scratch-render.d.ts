@@ -33,6 +33,7 @@ declare module "scratch-render" {
         updateDrawableVisible(drawableID: number, visible: boolean): void;
         updateDrawableEffect(drawableID: number, effectName: string, value: number): void;
         setDrawableOrder(drawableID: number, order: number, group?: string, optIsRelative?: boolean, optMin?: number): number;
+        getDrawableOrder(drawableID: number): number;
 
         createSVGSkin(svgData: string, rotationCenter?: [number, number]): number;
         createBitmapSkin(

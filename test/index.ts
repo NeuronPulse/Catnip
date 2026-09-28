@@ -110,6 +110,25 @@ async function main() {
                                     t.fail(`${message}: expected ${expected}, got ${actual}`);
                                 break;
                             }
+                            // "layer A B" asserts that target A is in front
+                            // of target B (higher layer rank; 0 = stage,
+                            // sprites follow in project order).
+                            case "layer": {
+                                const parts = arg.split(/\s+/);
+                                const front = Number(parts[0]);
+                                const behind = Number(parts[1]);
+                                if (projectModule === null || parts.length !== 2
+                                    || Number.isNaN(front) || Number.isNaN(behind)) {
+                                    t.fail(`Bad layer protocol word: ${message}`);
+                                    break;
+                                }
+                                const ranks = projectModule.getLayers();
+                                if (ranks[front] > ranks[behind])
+                                    t.pass(message);
+                                else
+                                    t.fail(`${message}: rank ${ranks[front]} <= ${ranks[behind]}`);
+                                break;
+                            }
                             case "comment":
                                 t.comment(message);
                                 break;

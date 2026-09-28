@@ -142,6 +142,7 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
         image.src = url;
     }
 
+
     /** Applies one packed draw state (see DRAW_STATE). */
     public applyDrawState(data: Float32Array): void {
         const targetCount = Math.floor(data.length / DRAW_STATE_STRIDE);
@@ -224,6 +225,40 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
 
     public drawState(data: Float32Array): void {
         this.applyDrawState(data);
+    }
+
+    public layer(data: Int32Array): void {
+        this.applyLayer(data);
+    }
+
+    /**
+     * Re-sorts the sprite drawables by layer rank (index 0 = stage, which is
+     * never reordered). The sprite group is contiguous in the global draw
+     * list, so its first slot is the lowest order any sprite currently holds;
+     * each drawable then moves to start + its sorted position, which is where
+     * setDrawableOrder's absolute indexing expects it.
+     */
+    public applyLayer(data: Int32Array): void {
+        const order: number[] = [];
+        let start = Infinity;
+
+        for (let i = 1; i < data.length; i++) {
+            const drawable = this._drawables[i];
+            if (drawable === undefined) continue;
+            order.push(i);
+            const current = this._renderer.getDrawableOrder(drawable);
+            if (current >= 0 && current < start) start = current;
+        }
+
+        if (!isFinite(start)) return;
+
+        order.sort((a, b) => data[a] - data[b]);
+
+        for (let pos = 0; pos < order.length; pos++) {
+            const drawable = this._drawables[order[pos]];
+            if (drawable !== undefined)
+                this._renderer.setDrawableOrder(drawable, start + pos, "sprite");
+        }
     }
 
     /** Draws one frame; the page calls this from its rAF loop when dirty. */

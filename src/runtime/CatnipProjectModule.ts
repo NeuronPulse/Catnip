@@ -93,6 +93,10 @@ export class CatnipProjectModule {
         // Hand the renderer the current visual state of every target. The
         // buffer is handed over, not copied, so it is rebuilt every frame.
         this.runtimeModule.renderer.drawState(this._serializeDrawState());
+        // Layer ranks only change when a layer op runs, so they go out on
+        // their own message whenever a target's layer_gen moved.
+        if (this._layerGenChanged())
+            this.runtimeModule.renderer.layer(this._serializeLayers());
         // Flush pen lines
         this.runtimeModule.functions.catnip_runtime_render_pen_flush(this.runtimeInstance.ptr);
         // Call the renderer
@@ -102,6 +106,38 @@ export class CatnipProjectModule {
     /** Packs every sprite's target state into DRAW_STATE_STRIDE floats each. */
     public getDrawState(): Float32Array {
         return this._serializeDrawState();
+    }
+
+    /** The layer rank of every target (index 0 = stage), sprites 1..n back to front. */
+    public getLayers(): Int32Array {
+        return this._serializeLayers();
+    }
+
+    private _serializeLayers(): Int32Array {
+        const sprites = Array.from(this.project.sprites);
+        const ranks = new Int32Array(sprites.length);
+
+        for (let i = 0; i < sprites.length; i++)
+            ranks[i] = sprites[i].defaultTarget.structWrapper.getMember("layer_rank");
+
+        return ranks;
+    }
+
+    private _layerGenCache: Int32Array | null = null;
+
+    /** True when any target's layer_gen differs from the last sent state. */
+    private _layerGenChanged(): boolean {
+        const sprites = Array.from(this.project.sprites);
+        const gens = new Int32Array(sprites.length);
+
+        for (let i = 0; i < sprites.length; i++)
+            gens[i] = sprites[i].defaultTarget.structWrapper.getMember("layer_gen");
+
+        if (this._layerGenCache !== null && this._layerGenCache.every((g, i) => g === gens[i]))
+            return false;
+
+        this._layerGenCache = gens;
+        return true;
     }
 
     private _serializeDrawState(): Float32Array {

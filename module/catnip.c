@@ -340,3 +340,15 @@ catnip_f64_t CATNIP_EXPORT(catnip_looks_backdrop_number)(catnip_runtime *runtime
 catnip_hstring *CATNIP_EXPORT(catnip_looks_backdrop_name)(catnip_runtime *runtime) {
   return catnip_looks_backdrop_name(runtime);
 }
+
+void CATNIP_EXPORT(catnip_looks_goto_front)(catnip_target *target) {
+  catnip_looks_goto_front(target);
+}
+
+void CATNIP_EXPORT(catnip_looks_goto_back)(catnip_target *target) {
+  catnip_looks_goto_back(target);
+}
+
+void CATNIP_EXPORT(catnip_looks_change_layer)(catnip_f64_t n, catnip_target *target) {
+  catnip_looks_change_layer(target, n);
+}
