@@ -448,6 +448,99 @@ type SB3BlockTypeDefinition = {
             "NUMBER_NAME": ProjectSB3Field<null, "name" | "number">
         }
     }
+    "looks_sayforsecs": {
+        inputs: {
+            "MESSAGE": ProjectSB3Input,
+            "SECS": ProjectSB3Input,
+        }
+    },
+    "looks_think": {
+        inputs: {
+            "MESSAGE": ProjectSB3Input,
+        }
+    },
+    "looks_thinkforsecs": {
+        inputs: {
+            "MESSAGE": ProjectSB3Input,
+            "SECS": ProjectSB3Input,
+        }
+    },
+    "looks_show": {},
+    "looks_hide": {},
+    "looks_hideallsprites": {},
+    "looks_switchbackdropto": {
+        inputs: {
+            "BACKDROP": ProjectSB3Input,
+        }
+    },
+    "looks_switchbackdroptoandwait": {
+        inputs: {
+            "BACKDROP": ProjectSB3Input,
+        }
+    },
+    "looks_nextbackdrop": {},
+    "looks_backdrops": {
+        fields: {
+            "BACKDROP": ProjectSB3Field<null>
+        }
+    },
+    "looks_nextcostume": {},
+    "looks_changeeffectby": {
+        fields: {
+            "EFFECT": ProjectSB3Field<null>
+        },
+        inputs: {
+            "CHANGE": ProjectSB3Input,
+        }
+    },
+    "looks_seteffectto": {
+        fields: {
+            "EFFECT": ProjectSB3Field<null>
+        },
+        inputs: {
+            "VALUE": ProjectSB3Input,
+        }
+    },
+    "looks_cleargraphiceffects": {},
+    "looks_changesizeby": {
+        inputs: {
+            "CHANGE": ProjectSB3Input,
+        }
+    },
+    "looks_setsizeto": {
+        inputs: {
+            "SIZE": ProjectSB3Input,
+        }
+    },
+    "looks_changestretchby": {
+        inputs: {
+            "CHANGE": ProjectSB3Input,
+        }
+    },
+    "looks_setstretchto": {
+        inputs: {
+            "STRETCH": ProjectSB3Input,
+        }
+    },
+    "looks_size": {},
+    "looks_gotofrontback": {
+        fields: {
+            "FRONT_BACK": ProjectSB3Field<null, "front" | "back">
+        }
+    },
+    "looks_goforwardbackwardlayers": {
+        fields: {
+            "FORWARD_BACKWARD": ProjectSB3Field<null, "forward" | "backward">
+        },
+        inputs: {
+            "NUM": ProjectSB3Input,
+        }
+    },
+    "looks_backdropnumbername": {
+        fields: {
+            "NUMBER_NAME": ProjectSB3Field<null, "name" | "number">
+        }
+    },
 
     "event_whenflagclicked": {},
     "event_whenthisspriteclicked": {},

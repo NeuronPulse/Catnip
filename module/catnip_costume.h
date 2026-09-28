@@ -15,6 +15,13 @@ struct catnip_costume {
     catnip_f32_t aabb_right;
     catnip_f32_t aabb_top;
     catnip_f32_t aabb_bottom;
+
+    /* The costume's natural size in stage units (pixels / bitmap resolution),
+       before any transform — what scratch-render's getCurrentSkinSize returns.
+       The size block clamps against this (see catnip_target_set_size); zero
+       until the host measures the asset. */
+    catnip_f32_t natural_width;
+    catnip_f32_t natural_height;
 };
 
 #endif

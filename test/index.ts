@@ -7,6 +7,8 @@ import { op_const } from "../src/ops/core/const";
 import { op_callback_command } from '../src/ops/core/callback_command';
 import { CatnipValueFormat } from "../src/compiler/CatnipValueFormat";
 import { CatnipEventID } from "../src/CatnipEvents";
+import { CatnipProjectModule } from "../src/runtime/CatnipProjectModule";
+import { DRAW_STATE, DRAW_STATE_STRIDE } from "../src/runtime/ICatnipRenderer";
 import { test } from "tap"
 
 
@@ -30,6 +32,9 @@ async function main() {
 
             let didPlan = false;
             let didEnd = false;
+            // Assigned once compiled; protocol words that read live state
+            // (like "draw") look at it while the project is stepping.
+            let projectModule: CatnipProjectModule | null = null;
             // A project that stops its own threads ("stop all") has nothing
             // left to say "end" with, so it says this instead and the run ends
             // when the last thread does.
@@ -83,6 +88,28 @@ async function main() {
                             case "click":
                                 pendingEvents.push(["IO_CLICK_TARGET", Number(arg)]);
                                 break;
+                            // "draw <target> <field> <value>" asserts the
+                            // live draw state (the same packing frame() sends
+                            // to the renderer), so visual blocks like size,
+                            // effects and visibility are checkable headless.
+                            case "draw": {
+                                const parts = arg.split(/\s+/);
+                                const targetIndex = Number(parts[0]);
+                                const field = (DRAW_STATE as Record<string, number>)[parts[1]];
+                                const expected = Number(parts[2]);
+                                if (projectModule === null || parts.length !== 3
+                                    || Number.isNaN(targetIndex) || field === undefined
+                                    || Number.isNaN(expected)) {
+                                    t.fail(`Bad draw protocol word: ${message}`);
+                                    break;
+                                }
+                                const actual = projectModule.getDrawState()[targetIndex * DRAW_STATE_STRIDE + field];
+                                if (Math.abs(actual - expected) < 1e-6)
+                                    t.pass(message);
+                                else
+                                    t.fail(`${message}: expected ${expected}, got ${actual}`);
+                                break;
+                            }
                             case "comment":
                                 t.comment(message);
                                 break;
@@ -95,7 +122,7 @@ async function main() {
                 ), true);
 
             const project = await run(catnipModule, projectFile);
-            const projectModule = await project.compile({
+            projectModule = await project.compile({
                 // Binaryen takes a long time, we don't need it for the tests
                 enable_optimization_binaryen: false,
                 // Force variable inlining for tests, to thoughly test it

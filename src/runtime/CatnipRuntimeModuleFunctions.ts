@@ -69,6 +69,31 @@ export const CatnipRuntimeModuleFunctions = {
     catnip_motion_glide_step: fn<[target: SpiderNumberType.i32], SpiderNumberType.f64>
         ([SpiderNumberType.i32], SpiderNumberType.f64),
 
+    catnip_looks_set_visible: fn<[visible: SpiderNumberType.i32, target: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
+    catnip_looks_set_size: fn<[size: SpiderNumberType.f64, target: SpiderNumberType.i32]>
+        ([SpiderNumberType.f64, SpiderNumberType.i32], undefined),
+    catnip_looks_change_size: fn<[delta: SpiderNumberType.f64, target: SpiderNumberType.i32]>
+        ([SpiderNumberType.f64, SpiderNumberType.i32], undefined),
+    catnip_looks_get_size: fn<[target: SpiderNumberType.i32], SpiderNumberType.f64>
+        ([SpiderNumberType.i32], SpiderNumberType.f64),
+    catnip_looks_set_effect: fn<[value: SpiderNumberType.f64, effect: SpiderNumberType.i32, target: SpiderNumberType.i32]>
+        ([SpiderNumberType.f64, SpiderNumberType.i32, SpiderNumberType.i32], undefined),
+    catnip_looks_change_effect: fn<[delta: SpiderNumberType.f64, effect: SpiderNumberType.i32, target: SpiderNumberType.i32]>
+        ([SpiderNumberType.f64, SpiderNumberType.i32, SpiderNumberType.i32], undefined),
+    catnip_looks_clear_effects: fn<[target: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32], undefined),
+    catnip_looks_next_costume: fn<[target: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32], undefined),
+    catnip_looks_backdrop_set: fn<[backdrop: SpiderNumberType.i32, runtime: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
+    catnip_looks_next_backdrop: fn<[runtime: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32], undefined),
+    catnip_looks_backdrop_number: fn<[runtime: SpiderNumberType.i32], SpiderNumberType.f64>
+        ([SpiderNumberType.i32], SpiderNumberType.f64),
+    catnip_looks_backdrop_name: fn<[runtime: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32], SpiderNumberType.i32),
+
     catnip_thread_new: fn<[target: SpiderNumberType.i32, fnprt: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_thread_yield: fn<[thread: SpiderNumberType.i32, fnprt: SpiderNumberType.i32], undefined>

@@ -78,6 +78,8 @@ export class CatnipCostume {
         struct.setMember("aabb_right", right);
         struct.setMember("aabb_top", top);
         struct.setMember("aabb_bottom", bottom);
+        struct.setMember("natural_width", size !== null ? size.width / resolution : 0);
+        struct.setMember("natural_height", size !== null ? size.height / resolution : 0);
     }
 
     /** The asset's size in costume pixels, or null when it cannot be read. */

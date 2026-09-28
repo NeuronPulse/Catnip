@@ -10,4 +10,6 @@ export const CatnipWasmStructCostume = new WasmStruct("catnip_costume", {
     aabb_top: WasmFloat32,
     aabb_bottom: WasmFloat32,
 
+    natural_width: WasmFloat32,
+    natural_height: WasmFloat32,
 });

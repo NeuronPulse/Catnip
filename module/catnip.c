@@ -1,6 +1,7 @@
 
 #include "./catnip.h"
 #include "./catnip_motion.h"
+#include "./catnip_looks.h"
 
 void CATNIP_EXPORT(catnip_init)() {
   catnip_strings_init();
@@ -290,4 +291,52 @@ void CATNIP_EXPORT(catnip_motion_glide_begin_to)(catnip_hstring *to, catnip_f64_
 
 catnip_f64_t CATNIP_EXPORT(catnip_motion_glide_step)(catnip_target *target) {
   return catnip_motion_glide_step(target);
+}
+
+void CATNIP_EXPORT(catnip_looks_set_visible)(catnip_bool_t visible, catnip_target *target) {
+  catnip_looks_set_visible(target, visible);
+}
+
+void CATNIP_EXPORT(catnip_looks_set_size)(catnip_f64_t size, catnip_target *target) {
+  catnip_looks_set_size(target, size);
+}
+
+void CATNIP_EXPORT(catnip_looks_change_size)(catnip_f64_t delta, catnip_target *target) {
+  catnip_looks_change_size(target, delta);
+}
+
+catnip_f64_t CATNIP_EXPORT(catnip_looks_get_size)(catnip_target *target) {
+  return catnip_looks_get_size(target);
+}
+
+void CATNIP_EXPORT(catnip_looks_set_effect)(catnip_f64_t value, catnip_i32_t effect, catnip_target *target) {
+  catnip_looks_set_effect(target, effect, value);
+}
+
+void CATNIP_EXPORT(catnip_looks_change_effect)(catnip_f64_t delta, catnip_i32_t effect, catnip_target *target) {
+  catnip_looks_change_effect(target, effect, delta);
+}
+
+void CATNIP_EXPORT(catnip_looks_clear_effects)(catnip_target *target) {
+  catnip_looks_clear_effects(target);
+}
+
+void CATNIP_EXPORT(catnip_looks_next_costume)(catnip_target *target) {
+  catnip_looks_next_costume(target);
+}
+
+void CATNIP_EXPORT(catnip_looks_backdrop_set)(catnip_hstring *backdrop, catnip_runtime *runtime) {
+  catnip_looks_backdrop_set(runtime, backdrop);
+}
+
+void CATNIP_EXPORT(catnip_looks_next_backdrop)(catnip_runtime *runtime) {
+  catnip_looks_next_backdrop(runtime);
+}
+
+catnip_f64_t CATNIP_EXPORT(catnip_looks_backdrop_number)(catnip_runtime *runtime) {
+  return catnip_looks_backdrop_number(runtime);
+}
+
+catnip_hstring *CATNIP_EXPORT(catnip_looks_backdrop_name)(catnip_runtime *runtime) {
+  return catnip_looks_backdrop_name(runtime);
 }

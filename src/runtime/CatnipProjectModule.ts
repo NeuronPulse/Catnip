@@ -100,6 +100,10 @@ export class CatnipProjectModule {
     }
 
     /** Packs every sprite's target state into DRAW_STATE_STRIDE floats each. */
+    public getDrawState(): Float32Array {
+        return this._serializeDrawState();
+    }
+
     private _serializeDrawState(): Float32Array {
         const sprites = Array.from(this.project.sprites);
         const state = new Float32Array(sprites.length * DRAW_STATE_STRIDE);
