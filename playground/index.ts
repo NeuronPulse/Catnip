@@ -7,6 +7,8 @@ type WorkerMessage =
     | { kind: "drawState", data: Float32Array }
     | { kind: "layer", data: Int32Array }
     | { kind: "bubble", data: import("../src/runtime/ICatnipRenderer").CatnipBubbleUpdate[] }
+    | { kind: "cloneAdd", slot: number, spriteIndex: number }
+    | { kind: "cloneRemove", slot: number }
     | { kind: "frame" }
     | { kind: "targets", targets: CatnipTargetRenderInfo[] }
     | { kind: "costumes", costumes: CatnipCostumeAsset[] }
@@ -134,6 +136,14 @@ async function main() {
                 break;
             case "bubble":
                 renderer.bubble(message.data);
+                drawPending = true;
+                break;
+            case "cloneAdd":
+                renderer.cloneAdd(message.slot, message.spriteIndex);
+                drawPending = true;
+                break;
+            case "cloneRemove":
+                renderer.cloneRemove(message.slot);
                 drawPending = true;
                 break;
             case "targets":

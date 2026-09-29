@@ -29,7 +29,7 @@ export const ir_get_list_length = new class extends CatnipIrInputOpType<get_list
         
         const listOffset = list.index * CatnipWasmStructList.size;
 
-        ctx.emitWasmConst(SpiderNumberType.i32, target.structWrapper.ptr);
+        ctx.emitWasmGetTargetPointer(target);
         ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructTarget.getMemberOffset("list_table"));
         ctx.emitWasm(SpiderOpcodes.i32_load, 2, listOffset + CatnipWasmStructList.getMemberOffset("length"));
     }

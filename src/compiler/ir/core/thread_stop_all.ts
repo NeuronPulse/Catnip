@@ -13,6 +13,11 @@ export const ir_thread_stop_all = new class extends CatnipIrCommandOpType<{}> {
     public getOperandCount(): number { return 0; }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<{}, {}>): void {
+        // runtime.stopAll disposes every clone first — each one stops its
+        // own threads — before the remaining threads (this one included) go.
+        ctx.emitWasmGetRuntime();
+        ctx.emitWasmRuntimeFunctionCall("catnip_clone_dispose_all");
+
         ctx.emitWasmGetThread();
         ctx.emitWasmRuntimeFunctionCall("catnip_thread_stop_all");
 

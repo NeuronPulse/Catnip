@@ -106,6 +106,17 @@ export const CatnipRuntimeModuleFunctions = {
     catnip_looks_bubble_format: fn<[value: SpiderNumberType.f64, runtime: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.f64, SpiderNumberType.i32], SpiderNumberType.i32),
 
+    catnip_clone_resolve_source: fn<[option: SpiderNumberType.i32, runtime: SpiderNumberType.i32, current: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_clone_create: fn<[source: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_clone_delete: fn<[target: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_clone_dispose_all: fn<[runtime: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32], undefined),
+    catnip_looks_go_behind: fn<[clone: SpiderNumberType.i32, source: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
+
     catnip_thread_new: fn<[target: SpiderNumberType.i32, fnprt: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_thread_yield: fn<[thread: SpiderNumberType.i32, fnprt: SpiderNumberType.i32], undefined>

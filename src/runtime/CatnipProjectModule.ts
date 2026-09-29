@@ -8,7 +8,7 @@ import { CatnipRuntimeGcStats, CatnipWasmStructRuntimeGcStats } from '../wasm-in
 import { CatnipBubbleUpdate, DRAW_STATE, DRAW_STATE_STRIDE } from "./ICatnipRenderer";
 import { CatnipWasmStructHeapString } from "../wasm-interop/CatnipWasmStructHeapString";
 import UTF16 from "../utf16";
-import { CATNIP_TARGET_FLAG_IS_VISIBLE } from "../wasm-interop/CatnipWasmStructTarget";
+import { CATNIP_TARGET_FLAG_IS_VISIBLE, CatnipWasmStructTarget } from "../wasm-interop/CatnipWasmStructTarget";
 
 export type CatnipProjectModuleEvent<TEvnetID extends CatnipEventID = CatnipEventID> = { id: TEvnetID, exportName: string };
 
@@ -24,7 +24,17 @@ export class CatnipProjectModule {
     private _events: Map<CatnipEventID, CatnipEventListener> = new Map();
 
     private _stepRate: number;
-    
+
+    // Draw-state slots: 0..n-1 are the sprites of project.json in order and
+    // never move (clones are what get disposed), clones take later slots and
+    // are recycled through the free list. A null slot is a hole where a clone
+    // used to be; its rows serialize as zeroes and the renderer skips them.
+    private _slots: (WasmStructWrapper<typeof CatnipWasmStructTarget> | null)[];
+    private _slotByPtr: Map<number, number>;
+    private _slotSpriteIndex: number[];
+    private _freeSlots: number[];
+    private _spriteIndexBySpritePtr: Map<number, number>;
+
     /** @internal */
     constructor(project: CatnipProject, instance: WebAssembly.Instance, events: CatnipProjectModuleEvent[]) {
         this.project = project;
@@ -39,6 +49,97 @@ export class CatnipProjectModule {
             if (eventExport === undefined) throw new Error(`Can't find event export '${event.exportName}'.`);
             this._events.set(event.id, eventExport);
         }
+
+        this._slots = [];
+        this._slotByPtr = new Map();
+        this._slotSpriteIndex = [];
+        this._freeSlots = [];
+        this._spriteIndexBySpritePtr = new Map();
+
+        for (const sprite of project.sprites) {
+            const wrapper = sprite.defaultTarget.structWrapper;
+            const slot = this._slots.length;
+            this._slots.push(wrapper);
+            this._slotSpriteIndex.push(slot);
+            this._slotByPtr.set(wrapper.ptr, slot);
+            this._spriteIndexBySpritePtr.set(sprite.structWrapper.ptr, slot);
+        }
+    }
+
+    /**
+     * Reconciles the slots with the live wasm target chain: a clone that
+     * appeared takes a free (or new) slot and its drawable is announced to
+     * the renderer, one that was deleted leaves a null hole. Runs before any
+     * serialization so the arrays the renderer gets always cover every
+     * drawable it has been told about.
+     *
+     * Memory freed by a deleted clone may be handed to the next allocation,
+     * so a live pointer can reappear as a different target: a pointer whose
+     * sprite no longer matches the slot was recycled and is re-added.
+     */
+    private _syncSlots(): void {
+        const live = new Set<number>();
+
+        let ptr: number = this.runtimeInstance.getMember("targets");
+        while (ptr !== 0) {
+            let slot = this._slotByPtr.get(ptr);
+
+            if (slot === undefined) {
+                slot = this._addSlot(ptr);
+            } else if (this._spriteIndexBySpritePtr.get(this._slots[slot]!.getMember("sprite")) !== this._slotSpriteIndex[slot]) {
+                this._removeSlot(ptr, slot);
+                slot = this._addSlot(ptr);
+            }
+
+            live.add(ptr);
+            ptr = this._slots[slot]!.getMember("next_global");
+        }
+
+        const removed: [number, number][] = [];
+        for (const [deadPtr, slot] of this._slotByPtr) {
+            if (!live.has(deadPtr)) removed.push([deadPtr, slot]);
+        }
+        for (const [deadPtr, slot] of removed)
+            this._removeSlot(deadPtr, slot);
+    }
+
+    private _addSlot(ptr: number): number {
+        const wrapper = CatnipWasmStructTarget.getWrapper(ptr, () => this.runtimeModule.memory);
+        const slot = this._freeSlots.pop() ?? this._slots.length;
+
+        if (slot === this._slots.length) {
+            this._slots.push(null);
+            this._slotSpriteIndex.push(-1);
+        }
+
+        this._slots[slot] = wrapper;
+        this._slotByPtr.set(ptr, slot);
+
+        const spriteIndex = this._spriteIndexBySpritePtr.get(wrapper.getMember("sprite")) ?? -1;
+        this._slotSpriteIndex[slot] = spriteIndex;
+        this.runtimeModule.renderer.cloneAdd(slot, spriteIndex);
+        return slot;
+    }
+
+    private _removeSlot(ptr: number, slot: number): void {
+        this._slotByPtr.delete(ptr);
+        this._slots[slot] = null;
+        this._freeSlots.push(slot);
+        this.runtimeModule.renderer.cloneRemove(slot);
+    }
+
+    /**
+     * The wasm pointer of the target in draw-state slot `index`, or 0 when
+     * the slot is empty — the way both the page's click pick and the test
+     * harness turn their index into the target an event belongs to. Clones
+     * live in slots too, so clicking one delivers that clone.
+     */
+    public getTargetPointer(index: number): number {
+        this._syncSlots();
+
+        if (index < 0 || index >= this._slots.length) return 0;
+        const wrapper = this._slots[index];
+        return wrapper === null ? 0 : wrapper.ptr;
     }
 
     public triggerEvent<TEventID extends CatnipEventID>(event: TEventID, ...args: CatnipEventArgs<TEventID>): boolean {
@@ -65,6 +166,10 @@ export class CatnipProjectModule {
     }
 
     public start(): void {
+        // scratch-vm's greenFlag calls stopAll first, whose first act is
+        // disposing every clone; the threads of the originals are cleared by
+        // the hat machinery itself. Clones from a previous run die here.
+        this.runtimeModule.functions.catnip_clone_dispose_all(this.runtimeInstance.ptr);
         this.triggerEvent("PROJECT_START");
     }
 
@@ -92,6 +197,9 @@ export class CatnipProjectModule {
     }
 
     public frame(): void {
+        // Clones come and go between frames; reconcile first so every array
+        // below covers the slots the renderer now knows about.
+        this._syncSlots();
         // Hand the renderer the current visual state of every target. The
         // buffer is handed over, not copied, so it is rebuilt every frame.
         this.runtimeModule.renderer.drawState(this._serializeDrawState());
@@ -111,11 +219,13 @@ export class CatnipProjectModule {
 
     /** Packs every sprite's target state into DRAW_STATE_STRIDE floats each. */
     public getDrawState(): Float32Array {
+        this._syncSlots();
         return this._serializeDrawState();
     }
 
     /** The layer rank of every target (index 0 = stage), sprites 1..n back to front. */
     public getLayers(): Int32Array {
+        this._syncSlots();
         return this._serializeLayers();
     }
 
@@ -149,15 +259,19 @@ export class CatnipProjectModule {
 
     /** Bubble changes since the last call — empty when nothing moved. */
     private _serializeBubbles(): CatnipBubbleUpdate[] {
-        const sprites = Array.from(this.project.sprites);
-        const gens = new Int32Array(sprites.length);
+        const gens = new Int32Array(this._slots.length);
         const updates: CatnipBubbleUpdate[] = [];
 
-        for (let i = 0; i < sprites.length; i++) {
-            const target = sprites[i].defaultTarget.structWrapper;
+        for (let i = 0; i < this._slots.length; i++) {
+            const target = this._slots[i];
+            if (target === null) {
+                gens[i] = -1;
+                continue;
+            }
+
             gens[i] = target.getMember("bubble_gen");
 
-            if (this._bubbleGenCache !== null && this._bubbleGenCache[i] === gens[i])
+            if (this._bubbleGenCache !== null && i < this._bubbleGenCache.length && this._bubbleGenCache[i] === gens[i])
                 continue;
 
             const ptr = target.getMember("bubble_text");
@@ -168,17 +282,21 @@ export class CatnipProjectModule {
             });
         }
 
-        if (this._bubbleGenCache === null || !this._bubbleGenCache.every((g, i) => g === gens[i]))
+        if (this._bubbleGenCache === null
+            || this._bubbleGenCache.length !== gens.length
+            || !this._bubbleGenCache.every((g, i) => g === gens[i]))
             this._bubbleGenCache = gens;
         return updates;
     }
 
     private _serializeLayers(): Int32Array {
-        const sprites = Array.from(this.project.sprites);
-        const ranks = new Int32Array(sprites.length);
+        const ranks = new Int32Array(this._slots.length);
 
-        for (let i = 0; i < sprites.length; i++)
-            ranks[i] = sprites[i].defaultTarget.structWrapper.getMember("layer_rank");
+        for (let i = 0; i < this._slots.length; i++) {
+            const target = this._slots[i];
+            if (target !== null)
+                ranks[i] = target.getMember("layer_rank");
+        }
 
         return ranks;
     }
@@ -187,13 +305,16 @@ export class CatnipProjectModule {
 
     /** True when any target's layer_gen differs from the last sent state. */
     private _layerGenChanged(): boolean {
-        const sprites = Array.from(this.project.sprites);
-        const gens = new Int32Array(sprites.length);
+        const gens = new Int32Array(this._slots.length);
 
-        for (let i = 0; i < sprites.length; i++)
-            gens[i] = sprites[i].defaultTarget.structWrapper.getMember("layer_gen");
+        for (let i = 0; i < this._slots.length; i++) {
+            const target = this._slots[i];
+            gens[i] = target === null ? -1 : target.getMember("layer_gen");
+        }
 
-        if (this._layerGenCache !== null && this._layerGenCache.every((g, i) => g === gens[i]))
+        if (this._layerGenCache !== null
+            && this._layerGenCache.length === gens.length
+            && this._layerGenCache.every((g, i) => g === gens[i]))
             return false;
 
         this._layerGenCache = gens;
@@ -201,11 +322,11 @@ export class CatnipProjectModule {
     }
 
     private _serializeDrawState(): Float32Array {
-        const sprites = Array.from(this.project.sprites);
-        const state = new Float32Array(sprites.length * DRAW_STATE_STRIDE);
+        const state = new Float32Array(this._slots.length * DRAW_STATE_STRIDE);
 
-        for (let i = 0; i < sprites.length; i++) {
-            const target = sprites[i].defaultTarget.structWrapper;
+        for (let i = 0; i < this._slots.length; i++) {
+            const target = this._slots[i];
+            if (target === null) continue;
             const base = i * DRAW_STATE_STRIDE;
 
             state[base + DRAW_STATE.x] = target.getMember("position_x");

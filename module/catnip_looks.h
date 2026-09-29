@@ -65,6 +65,11 @@ void catnip_looks_goto_front(catnip_target *target);
 void catnip_looks_goto_back(catnip_target *target);
 void catnip_looks_change_layer(catnip_target *target, catnip_f64_t n);
 
+/* clone creation only: puts `clone` immediately behind `source` — the layer
+   splice RenderedTarget.goBehindOther performs, renumbering ranks and
+   bumping the clone's layer_gen. */
+void catnip_looks_go_behind(catnip_target *clone, catnip_target *source);
+
 /* Say/think bubbles. bubble_type is one of these; an empty message clears
    the bubble the way Scratch3LooksBlocks._updateBubble does with ''. */
 #define CATNIP_BUBBLE_NONE 0

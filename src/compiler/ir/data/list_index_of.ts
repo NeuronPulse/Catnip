@@ -28,7 +28,7 @@ export const ir_list_index_of = new class extends CatnipIrInputOpType<list_index
         const listOffset = list.index * CatnipWasmStructList.size;
 
         // Get a pointer to the list
-        ctx.emitWasmConst(SpiderNumberType.i32, target.structWrapper.ptr);
+        ctx.emitWasmGetTargetPointer(target);
         ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructTarget.getMemberOffset("list_table"));
         ctx.emitWasmConst(SpiderNumberType.i32, listOffset);
         ctx.emitWasm(SpiderOpcodes.i32_add);

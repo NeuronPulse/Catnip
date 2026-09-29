@@ -246,6 +246,19 @@ void catnip_looks_change_layer(catnip_target *target, catnip_f64_t n) {
   looks_layer_move(target, looks_layer_position(target) + (catnip_i32_t)n);
 }
 
+/* clone creation: RenderedTarget.goBehindOther puts the new clone straight
+   behind the target it was cloned from (setDrawableOrder splice), which is
+   a move to the source's slot — everyone from the source forward shifts up
+   one and the mover's layer_gen bumps so frame() re-sorts. The clone is
+   parked at the front of the order first, so its temporary rank cannot tie
+   with anything already in it. */
+void catnip_looks_go_behind(catnip_target *clone, catnip_target *source) {
+  if (!looks_is_sprite(clone) || !looks_is_sprite(source)) return;
+
+  clone->layer_rank = 0x7fffffff;
+  looks_layer_move(clone, looks_layer_position(source));
+}
+
 /* Say/think bubbles ---------------------------------------------------- */
 
 /* Scratch3LooksBlocks.SAY_BUBBLE_LIMIT. */

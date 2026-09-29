@@ -34,7 +34,7 @@ export const ir_replace_list_item = new class extends CatnipIrCommandOpType<repl
             allowEqualToLength: false, allowLast: true,
         }, ir.operands[1], target, list, (ctx, indexVariable) => {
             // Get the pointer to the list's data
-            ctx.emitWasmConst(SpiderNumberType.i32, target.structWrapper.ptr);
+            ctx.emitWasmGetTargetPointer(target);
             ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructTarget.getMemberOffset("list_table"));
             ctx.emitWasm(SpiderOpcodes.i32_load, 2, listOffset + CatnipWasmStructList.getMemberOffset("data"));
 

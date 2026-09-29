@@ -32,6 +32,8 @@ type ToMainMessage =
     | { kind: "drawState", data: Float32Array }
     | { kind: "layer", data: Int32Array }
     | { kind: "bubble", data: import("../src/runtime/ICatnipRenderer").CatnipBubbleUpdate[] }
+    | { kind: "cloneAdd", slot: number, spriteIndex: number }
+    | { kind: "cloneRemove", slot: number }
     | { kind: "frame" }
     | { kind: "targets", targets: TargetInfo[] }
     | { kind: "costumes", costumes: CostumeAsset[] }
@@ -78,6 +80,16 @@ class RemoteRenderer implements ICatnipRenderer {
     public bubble(data: import("../src/runtime/ICatnipRenderer").CatnipBubbleUpdate[]): void {
         // Sent only when a bubble changed; small JSON payloads.
         workerScope.postMessage({ kind: "bubble", data });
+    }
+
+    public cloneAdd(slot: number, spriteIndex: number): void {
+        // Small control message; must arrive before the drawState that
+        // first mentions the slot (postMessage keeps order).
+        workerScope.postMessage({ kind: "cloneAdd", slot, spriteIndex });
+    }
+
+    public cloneRemove(slot: number): void {
+        workerScope.postMessage({ kind: "cloneRemove", slot });
     }
 
     public frame(): void {
@@ -191,16 +203,12 @@ async function main() {
                 projectModule.triggerEvent("IO_MOUSE_UP");
                 break;
             case "click": {
-                // The pick gives an index in project.sprites order (the same
-                // order the draw states are packed in); the event carries the
-                // clicked target's pointer.
-                let targetIndex = 0;
-                for (const sprite of project.sprites) {
-                    if (targetIndex++ === message.targetIndex) {
-                        projectModule.triggerEvent("IO_CLICK_TARGET", sprite.defaultTarget.structWrapper.ptr);
-                        break;
-                    }
-                }
+                // The pick is an index in draw-state slot order — the
+                // originals in project order, then any live clone — and the
+                // event carries the pointer of the target actually clicked.
+                const ptr = projectModule.getTargetPointer(message.targetIndex);
+                if (ptr !== 0)
+                    projectModule.triggerEvent("IO_CLICK_TARGET", ptr);
                 break;
             }
             case "stepRate":

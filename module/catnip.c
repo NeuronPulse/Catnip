@@ -2,6 +2,7 @@
 #include "./catnip.h"
 #include "./catnip_motion.h"
 #include "./catnip_looks.h"
+#include "./catnip_clone.h"
 
 void CATNIP_EXPORT(catnip_init)() {
   catnip_strings_init();
@@ -363,4 +364,24 @@ void CATNIP_EXPORT(catnip_looks_clear_if_unchanged)(catnip_ui32_t usage, catnip_
 
 catnip_hstring *CATNIP_EXPORT(catnip_looks_bubble_format)(catnip_f64_t value, catnip_runtime *runtime) {
   return catnip_looks_bubble_format(value, runtime);
+}
+
+catnip_target *CATNIP_EXPORT(catnip_clone_resolve_source)(catnip_hstring *option, catnip_runtime *runtime, catnip_target *current) {
+  return catnip_clone_resolve_source(option, runtime, current);
+}
+
+catnip_target *CATNIP_EXPORT(catnip_clone_create)(catnip_target *source) {
+  return catnip_clone_create(source);
+}
+
+catnip_i32_t CATNIP_EXPORT(catnip_clone_delete)(catnip_target *target) {
+  return catnip_clone_delete(target);
+}
+
+void CATNIP_EXPORT(catnip_clone_dispose_all)(catnip_runtime *runtime) {
+  catnip_clone_dispose_all(runtime);
+}
+
+void CATNIP_EXPORT(catnip_looks_go_behind)(catnip_target *clone, catnip_target *source) {
+  catnip_looks_go_behind(clone, source);
 }

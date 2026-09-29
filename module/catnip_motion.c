@@ -20,9 +20,12 @@ static catnip_bool_t motion_is(const catnip_hstring *str, const char *cstr) {
 }
 
 /* getSpriteTargetByName: walks every target (the stage included) and returns
-   the first whose sprite is named `name`. */
+   the first whose sprite is named `name`. scratch's array lists the
+   originals first, so clones — same sprite, same name — never win here;
+   our chain is prepended, so they are skipped explicitly. */
 static catnip_target *motion_find_target(catnip_runtime *runtime, const catnip_hstring *name) {
   for (catnip_target *t = runtime->targets; t != 0; t = t->next_global) {
+    if (t->flags & CATNIP_TARGET_FLAG_IS_CLONE) continue;
     if (t->sprite->name != 0 && catnip_hstring_equal(t->sprite->name, name))
       return t;
   }

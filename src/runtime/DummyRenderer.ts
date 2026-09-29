@@ -7,6 +7,8 @@ export class DummyRenderer implements ICatnipRenderer {
     drawState(data: Float32Array): void { }
     layer(data: Int32Array): void { }
     bubble(data: import("./ICatnipRenderer").CatnipBubbleUpdate[]): void { }
+    cloneAdd(slot: number, spriteIndex: number): void { }
+    cloneRemove(slot: number): void { }
     frame(): void { }
 
 }

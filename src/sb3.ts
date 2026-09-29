@@ -633,7 +633,19 @@ type SB3BlockTypeDefinition = {
     },
     "control_get_counter": {},
     "control_incr_counter": {},
-    "control_clear_counter": {}
+    "control_clear_counter": {},
+    "control_create_clone_of": {
+        inputs: {
+            "CLONE_OPTION": ProjectSB3Input,
+        }
+    },
+    "control_create_clone_of_menu": {
+        fields: {
+            "CLONE_OPTION": ProjectSB3Field<null>
+        }
+    },
+    "control_delete_this_clone": {},
+    "control_start_as_clone": {},
 
     "operator_add": {
         inputs: {

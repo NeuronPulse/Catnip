@@ -199,13 +199,12 @@ async function main() {
                 while (pendingEvents.length !== 0) {
                     const [eventID, arg] = pendingEvents.shift()!;
                     if (eventID === "IO_CLICK_TARGET") {
-                        let spriteIndex = 0;
-                        for (const sprite of project.sprites) {
-                            if (spriteIndex++ === arg) {
-                                projectModule.triggerEvent("IO_CLICK_TARGET", sprite.defaultTarget.structWrapper.ptr);
-                                break;
-                            }
-                        }
+                        // The number is a draw-state slot index (0 = stage,
+                        // originals follow, then any live clone); the event
+                        // carries the pointer of the target in that slot.
+                        const targetPointer = projectModule!.getTargetPointer(arg);
+                        if (targetPointer !== 0)
+                            projectModule!.triggerEvent("IO_CLICK_TARGET", targetPointer);
                     } else {
                         projectModule.triggerEvent(eventID, arg);
                     }

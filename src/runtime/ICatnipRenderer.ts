@@ -62,6 +62,18 @@ export interface ICatnipRenderer {
      */
     bubble(data: CatnipBubbleUpdate[]): void;
 
+    /**
+     * A clone appeared: draw-state, layer and bubble arrays are indexed by
+     * slot (the originals keep 0..n-1 forever, clones fill later slots), and
+     * a new slot needs its drawable before the next drawState can mention
+     * it. spriteIndex is the owning sprite — clones share their sprite's
+     * costumes, so the receiver maps the slot to the sprite's skins.
+     */
+    cloneAdd(slot: number, spriteIndex: number): void;
+
+    /** A clone was deleted (or every clone was disposed): drop its drawable. */
+    cloneRemove(slot: number): void;
+
     frame(): void;
 
 }

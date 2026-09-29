@@ -55,6 +55,8 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
     private _drawables: (number | undefined)[] = [];
     private _skins: Map<string, number> = new Map();
     private _appliedSkins: (number | undefined)[] = [];
+    /** Sprite index per draw-state slot: clones share their sprite's skins. */
+    private _skinTargetIndex: number[] = [];
     private _stageIndex: number = 0;
 
     private _penDrawableID: number | null = null;
@@ -89,7 +91,36 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
         for (const info of ordered) {
             const group = info.isStage ? "background" : "sprite";
             this._drawables[info.index] = this._renderer.createDrawable(group);
+            this._skinTargetIndex[info.index] = info.index;
             if (info.isStage) this._stageIndex = info.index;
+        }
+    }
+
+    /** A clone took a draw-state slot: give it a drawable of its sprite's group. */
+    public cloneAdd(slot: number, spriteIndex: number): void {
+        this._drawables[slot] = this._renderer.createDrawable("sprite");
+        this._skinTargetIndex[slot] = spriteIndex;
+        // The slot may be recycled from an earlier clone; its skin must be
+        // re-applied to the fresh drawable.
+        this._appliedSkins[slot] = undefined;
+        this._drawX[slot] = 0;
+        this._drawY[slot] = 0;
+        this._drawVisible[slot] = false;
+    }
+
+    /** A clone's slot went empty (deleted or all clones disposed). */
+    public cloneRemove(slot: number): void {
+        const drawable = this._drawables[slot];
+        if (drawable !== undefined) this._renderer.destroyDrawable(drawable, "sprite");
+
+        this._drawables[slot] = undefined;
+        this._appliedSkins[slot] = undefined;
+        this._bubbles.delete(slot);
+
+        const bubbleEl = this._bubbleEls.get(slot);
+        if (bubbleEl !== undefined) {
+            bubbleEl.remove();
+            this._bubbleEls.delete(slot);
         }
     }
 
@@ -265,7 +296,10 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
             this._renderer.updateDrawableDirectionScale(drawable, renderedDirection, [scaleX, scaleY]);
             this._renderer.updateDrawableVisible(drawable, data[base + DRAW_STATE.visible] !== 0);
 
-            const skinKey = `${i}:${data[base + DRAW_STATE.costume]}`;
+            // Slots past the originals are clones, whose skin key is their
+            // sprite's — same costumes, same skins.
+            const spriteIndex = this._skinTargetIndex[i] ?? i;
+            const skinKey = `${spriteIndex}:${data[base + DRAW_STATE.costume]}`;
             const skinID = this._skins.get(skinKey);
             if (skinID !== undefined && this._appliedSkins[i] !== skinID) {
                 this._renderer.updateDrawableSkinId(drawable, skinID);

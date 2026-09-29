@@ -10,6 +10,7 @@ import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOpBranches, CatnipIrOpBra
 import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 import { CatnipSprite, CatnipSpriteID } from "../runtime/CatnipSprite";
+import { CatnipTarget } from "../runtime/CatnipTarget";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipIrBranch, CatnipIrBranchType } from "./CatnipIrBranch";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
@@ -286,6 +287,23 @@ export class CatnipCompilerWasmGenContext {
     public emitWasmGetCurrentTarget() {
         this.emitWasmGetThread();
         this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("target"));
+    }
+
+    /**
+     * The pointer of `target` to emit for a data block (variable or list).
+     * A block whose variable lives on this script's own sprite must run
+     * against whatever target executes it — scratch keeps each clone's copy
+     * of the sprite's variables and lists (duplicateVariables), so reading
+     * or writing through the original would share what Scratch separates.
+     * Anything else (the stage's globals read from a sprite script) stays a
+     * compile-time pointer: scratch resolves those through the stage target
+     * no matter who is running.
+     */
+    public emitWasmGetTargetPointer(target: CatnipTarget): void {
+        if (target.sprite.id === this.spriteID)
+            this.emitWasmGetCurrentTarget();
+        else
+            this.emitWasmConst(SpiderNumberType.i32, target.structWrapper.ptr);
     }
 
     public emitWasmGetStackPtr() {
