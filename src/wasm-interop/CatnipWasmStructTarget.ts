@@ -69,6 +69,11 @@ export const CatnipWasmStructTarget = new WasmStruct("catnip_target", {
     bubble_text: WasmPtrVoid,
     bubble_type: WasmUInt32,
     bubble_gen: WasmUInt32,
+
+    edge_hat_keys: WasmPtrVoid,
+    edge_hat_values: WasmPtrVoid,
+    edge_hat_count: WasmUInt32,
+    edge_hat_capacity: WasmUInt32,
 });
 
 /** Mirrors CATNIP_BUBBLE_* in module/catnip_looks.h. */

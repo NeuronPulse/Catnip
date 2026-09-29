@@ -54,6 +54,15 @@ catnip_runtime *catnip_runtime_new() {
   return rt;
 }
 
+void catnip_runtime_reset_timer(catnip_runtime *runtime) {
+  CATNIP_ASSERT(runtime != CATNIP_NULL);
+
+  // scratch-vm's greenFlag calls ioDevices.clock.resetProjectTimer(), which
+  // restarts the project timer the moment the flag is pressed.
+  update_time(runtime);
+  runtime->timer_start = runtime->time;
+}
+
 void catnip_runtime_tick(catnip_runtime *runtime) {
   CATNIP_ASSERT(runtime != CATNIP_NULL);
 

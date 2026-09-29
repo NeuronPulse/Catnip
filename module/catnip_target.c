@@ -69,7 +69,11 @@ static catnip_thread *catnip_target_find_thread(catnip_target *target, catnip_th
 }
 
 void catnip_target_start_thread(catnip_target *target, catnip_thread_fnptr entrypoint, catnip_list *threadList, catnip_ui32_t mode) {
-  if (mode == CATNIP_THREAD_START_RESTART) {
+  if (mode == CATNIP_THREAD_START_SKIP_IF_RUNNING) {
+    if (catnip_target_find_thread(target, entrypoint) != CATNIP_NULL) {
+      return;
+    }
+  } else if (mode == CATNIP_THREAD_START_RESTART) {
     catnip_thread *existing = catnip_target_find_thread(target, entrypoint);
 
     if (existing != CATNIP_NULL) {
@@ -98,6 +102,66 @@ void catnip_target_start_thread(catnip_target *target, catnip_thread_fnptr entry
     CATNIP_LIST_ADD(threadList, catnip_thread *, newThread);
     catnip_thread_ref(newThread);
   }
+}
+
+#define CATNIP_EDGE_HAT_NO_VALUE 0
+#define CATNIP_EDGE_HAT_FALSE 1
+#define CATNIP_EDGE_HAT_TRUE 2
+
+catnip_bool_t catnip_edge_hat_poll(catnip_target *target, catnip_ui32_t key, catnip_bool_t predicate) {
+  for (catnip_ui32_t i = 0; i < target->edge_hat_count; ++i) {
+    if (target->edge_hat_keys[i] != key) continue;
+
+    catnip_bool_t had_value = target->edge_hat_values[i] != CATNIP_EDGE_HAT_NO_VALUE;
+    catnip_bool_t was_true = target->edge_hat_values[i] == CATNIP_EDGE_HAT_TRUE;
+
+    target->edge_hat_values[i] = predicate ? CATNIP_EDGE_HAT_TRUE : CATNIP_EDGE_HAT_FALSE;
+
+    // Rising edge only: true fires when it used to be false, or when this is
+    // the first evaluation and it already holds (scratch's edgeWasActivated).
+    if (!had_value) return predicate;
+    return !was_true && predicate;
+  }
+
+  if (target->edge_hat_count == target->edge_hat_capacity) {
+    catnip_ui32_t capacity = target->edge_hat_capacity == 0 ? 4 : target->edge_hat_capacity * 2;
+    catnip_ui32_t *keys = catnip_mem_alloc(sizeof(catnip_ui32_t) * capacity);
+    catnip_ui32_t *values = catnip_mem_alloc(sizeof(catnip_ui32_t) * capacity);
+
+    if (target->edge_hat_capacity != 0) {
+      catnip_mem_copy(keys, target->edge_hat_keys, sizeof(catnip_ui32_t) * target->edge_hat_count);
+      catnip_mem_copy(values, target->edge_hat_values, sizeof(catnip_ui32_t) * target->edge_hat_count);
+      catnip_mem_free(target->edge_hat_keys);
+      catnip_mem_free(target->edge_hat_values);
+    }
+
+    target->edge_hat_keys = keys;
+    target->edge_hat_values = values;
+    target->edge_hat_capacity = capacity;
+  }
+
+  target->edge_hat_keys[target->edge_hat_count] = key;
+  target->edge_hat_values[target->edge_hat_count] = predicate ? CATNIP_EDGE_HAT_TRUE : CATNIP_EDGE_HAT_FALSE;
+  target->edge_hat_count++;
+
+  return predicate;
+}
+
+void catnip_edge_hat_clear_all(struct catnip_runtime *runtime) {
+  for (catnip_target *t = runtime->targets; t != CATNIP_NULL; t = t->next_global)
+    t->edge_hat_count = 0;
+}
+
+void catnip_edge_hat_copy(catnip_target *to, catnip_target *from) {
+  if (from->edge_hat_count == 0) return;
+
+  catnip_ui32_t count = from->edge_hat_count;
+  to->edge_hat_keys = catnip_mem_alloc(sizeof(catnip_ui32_t) * count);
+  to->edge_hat_values = catnip_mem_alloc(sizeof(catnip_ui32_t) * count);
+  catnip_mem_copy(to->edge_hat_keys, from->edge_hat_keys, sizeof(catnip_ui32_t) * count);
+  catnip_mem_copy(to->edge_hat_values, from->edge_hat_values, sizeof(catnip_ui32_t) * count);
+  to->edge_hat_count = count;
+  to->edge_hat_capacity = count;
 }
 
 void catnip_target_set_direction(catnip_target *target, catnip_f64_t direction) {

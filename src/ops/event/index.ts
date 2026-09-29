@@ -6,6 +6,7 @@ import { op_event_broadcast } from "./broadcast";
 import { op_event_broadcast_and_wait } from "./broadcast_and_wait";
 import { when_key_pressed_trigger } from "./when_key_pressed";
 import { when_clicked_trigger } from "./when_clicked";
+import { when_greater_than_trigger } from "./when_greater_than";
 
 export default {
     event_when_flag_clicked_trigger: when_flag_clicked_trigger,
@@ -13,4 +14,5 @@ export default {
     event_broadcast_and_wait: op_event_broadcast_and_wait,
     event_when_key_pressed_trigger: when_key_pressed_trigger,
     event_when_clicked_trigger: when_clicked_trigger,
+    event_when_greater_than_trigger: when_greater_than_trigger,
 };

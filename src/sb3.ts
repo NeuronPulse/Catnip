@@ -565,6 +565,14 @@ type SB3BlockTypeDefinition = {
             "KEY_OPTION": ProjectSB3Field<null>
         }
     },
+    "event_whengreaterthan": {
+        fields: {
+            "WHENGREATERTHANMENU": ProjectSB3Field<string>
+        },
+        inputs: {
+            "VALUE": ProjectSB3Input
+        }
+    },
 
     "control_if": {
         inputs: {

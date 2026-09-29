@@ -1,7 +1,7 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompiler } from "../CatnipCompiler";
 import { CatnipCompilerSubsystem } from "../CatnipCompilerSubsystem";
-import { CatnipTriggerFunctionGenerator, CATNIP_THREAD_START_ALWAYS } from "../CatnipTriggerGenerator";
+import { CatnipTriggerFunctionGenerator, CATNIP_THREAD_START_SKIP_IF_RUNNING } from "../CatnipTriggerGenerator";
 import { CatnipIrScriptKeyPressedTrigger } from "../ir/event/key_pressed_trigger";
 
 
@@ -20,18 +20,17 @@ export class CatnipCompilerKeyTriggerSubsystem extends CatnipCompilerSubsystem {
     private _getTriggerFunctionGenerator(key: number | null): CatnipTriggerFunctionGenerator {
         if (key === null) {
             if (this._anyKey === null)
-                // scratch-vm's key hats declare restartExistingThreads: false
-                // (a key press is ignored while the hat's script runs). Catnip
-                // has not modeled that give-up yet and keeps starting a new
-                // thread for every press.
-                this._anyKey = new CatnipTriggerFunctionGenerator(this.compiler, false, CATNIP_THREAD_START_ALWAYS);
+                // scratch-vm's key hats declare restartExistingThreads: false,
+                // so startHats gives up while the hat's script still runs —
+                // press again after it finished and it starts fresh.
+                this._anyKey = new CatnipTriggerFunctionGenerator(this.compiler, false, CATNIP_THREAD_START_SKIP_IF_RUNNING);
             return this._anyKey;
         }
 
         let generator = this._keyMap.get(key);
 
         if (generator === undefined) {
-            generator = new CatnipTriggerFunctionGenerator(this.compiler, false, CATNIP_THREAD_START_ALWAYS);
+            generator = new CatnipTriggerFunctionGenerator(this.compiler, false, CATNIP_THREAD_START_SKIP_IF_RUNNING);
             this._keyMap.set(key, generator);
         }
 

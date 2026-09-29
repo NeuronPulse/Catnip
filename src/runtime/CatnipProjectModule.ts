@@ -170,6 +170,10 @@ export class CatnipProjectModule {
         // disposing every clone; the threads of the originals are cleared by
         // the hat machinery itself. Clones from a previous run die here.
         this.runtimeModule.functions.catnip_clone_dispose_all(this.runtimeInstance.ptr);
+        // greenFlag then resets the project timer and clears every target's
+        // edge-activated hat values, so "when timer > N" re-arms per run.
+        this.runtimeModule.functions.catnip_runtime_reset_timer(this.runtimeInstance.ptr);
+        this.runtimeModule.functions.catnip_edge_hat_clear_all(this.runtimeInstance.ptr);
         this.triggerEvent("PROJECT_START");
     }
 
@@ -193,6 +197,9 @@ export class CatnipProjectModule {
     }
 
     public step(): void {
+        // Edge-activated hats are polled before the tick, the order
+        // scratch-vm's _step uses: startHats for them, then stepThreads.
+        this.triggerEvent("PROJECT_FRAME");
         this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
     }
 

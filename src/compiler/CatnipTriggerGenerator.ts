@@ -9,6 +9,7 @@ import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 /** Mirrors CATNIP_THREAD_START_* in module/catnip_target.h. */
 export const CATNIP_THREAD_START_ALWAYS = 0;
 export const CATNIP_THREAD_START_RESTART = 1;
+export const CATNIP_THREAD_START_SKIP_IF_RUNNING = 2;
 
 /**
  * Generates a function which starts threads.

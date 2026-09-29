@@ -385,3 +385,15 @@ void CATNIP_EXPORT(catnip_clone_dispose_all)(catnip_runtime *runtime) {
 void CATNIP_EXPORT(catnip_looks_go_behind)(catnip_target *clone, catnip_target *source) {
   catnip_looks_go_behind(clone, source);
 }
+
+catnip_bool_t CATNIP_EXPORT(catnip_edge_hat_poll)(catnip_target *target, catnip_ui32_t key, catnip_bool_t predicate) {
+  return catnip_edge_hat_poll(target, key, predicate);
+}
+
+void CATNIP_EXPORT(catnip_edge_hat_clear_all)(catnip_runtime *runtime) {
+  catnip_edge_hat_clear_all(runtime);
+}
+
+void CATNIP_EXPORT(catnip_runtime_reset_timer)(catnip_runtime *runtime) {
+  catnip_runtime_reset_timer(runtime);
+}

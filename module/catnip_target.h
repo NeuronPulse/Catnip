@@ -93,6 +93,17 @@ struct catnip_target {
     catnip_hstring *bubble_text;
     catnip_ui32_t bubble_type;
     catnip_ui32_t bubble_gen;
+
+    /* Edge-activated hats ("when timer > N"): the last predicate value per
+       hat, what scratch-vm keeps in target._edgeActivatedHatValues keyed by
+       hat block id. keys/values grow on demand; values[i] is 0 = never
+       evaluated, 1 = false, 2 = true — the "never" state exists so the first
+       true fires, like execute.js's hasOldEdgeValue ? ... : resolvedValue.
+       Freed when a clone is deleted, cleared on green flag. */
+    catnip_ui32_t *edge_hat_keys;
+    catnip_ui32_t *edge_hat_values;
+    catnip_ui32_t edge_hat_count;
+    catnip_ui32_t edge_hat_capacity;
 };
 
 /* An axis-aligned box in stage coordinates (y up). */
@@ -108,14 +119,32 @@ typedef struct catnip_bounds {
    each hat's block info (see scratch3_event.js getHats). */
 #define CATNIP_THREAD_START_ALWAYS 0
 #define CATNIP_THREAD_START_RESTART 1
+#define CATNIP_THREAD_START_SKIP_IF_RUNNING 2
 
 catnip_target *catnip_target_new(struct catnip_runtime *runtime, catnip_sprite *sprite);
 /* Starts the script at entrypoint on target. With CATNIP_THREAD_START_RESTART
    a script that is already running is restarted instead of duplicated, the way
    scratch-vm restarts the thread of a "when I receive" hat when its message
-   arrives again. The thread (the restarted one, or the new one) is appended to
-   threadList when it is not null, with a reference for the list to hold. */
+   arrives again. With CATNIP_THREAD_START_SKIP_IF_RUNNING a press is ignored
+   while the script still has a live thread, the way scratch-vm gives up in
+   startHats when a hat declares restartExistingThreads: false (key hats and
+   the timer/loudness hat). The thread (the new one, or the restarted one —
+   nothing when skipped) is appended to threadList when it is not null, with a
+   reference for the list to hold. */
 void catnip_target_start_thread(catnip_target *target, catnip_thread_fnptr entrypoint, catnip_list *threadList, catnip_ui32_t mode);
+/* Edge-activated hat evaluation, called once per frame from the hat script's
+   own thread (the predicate runs there so it sees the live target, clones
+   included). Stores predicate under key — growing the per-target tables on
+   first use — and returns whether the rising edge fired: first evaluation
+   fires immediately when the predicate already holds, matching scratch-vm's
+   execute.js handleReport, and a still-running script keeps its stored value
+   (startHats gives up while the thread lives, so nothing is evaluated then). */
+catnip_bool_t catnip_edge_hat_poll(catnip_target *target, catnip_ui32_t key, catnip_bool_t predicate);
+/* Green flag: scratch-vm's greenFlag calls clearEdgeActivatedValues() on
+   every target, so the hats can fire again on the next rising edge. */
+void catnip_edge_hat_clear_all(struct catnip_runtime *runtime);
+/* scratch-vm's makeClone copies _edgeActivatedHatValues into the clone. */
+void catnip_edge_hat_copy(catnip_target *to, catnip_target *from);
 void catnip_target_set_xy(catnip_target* target, catnip_f64_t x, catnip_f64_t y);
 /* Sets the direction with scratch-vm's wrapClamp(-179, 180); the stage never
    rotates, and a non-finite direction is ignored, like setDirection. */

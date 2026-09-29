@@ -81,6 +81,10 @@ export type CatnipEventListener<EventID extends CatnipEventID = CatnipEventID> =
 export const CatnipEvents = {
     PROJECT_START: new CatnipEventInfo([] as const),
     PROJECT_BROADCAST: new CatnipEventInfo(["STRING", "POINTER"] as const),
+    // Polled every simulation step before the tick: edge-activated hats
+    // ("when timer > N") are evaluated by scratch-vm's _step ahead of
+    // sequencer.stepThreads. Only registered when the project has one.
+    PROJECT_FRAME: new CatnipEventInfo([] as const),
 
     IO_KEY_PRESSED: new CatnipEventInfo(["NUMBER_I32"] as const), // keyCode
     IO_KEY_RELEASED: new CatnipEventInfo(["NUMBER_I32"] as const), // keyCode

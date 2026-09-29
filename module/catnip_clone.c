@@ -110,6 +110,10 @@ catnip_target *catnip_clone_create(catnip_target *source) {
     }
   }
 
+  /* makeClone also copies _edgeActivatedHatValues, so a clone spawned while
+     an edge hat's predicate already holds does not fire it again. */
+  catnip_edge_hat_copy(clone, source);
+
   return clone;
 }
 
@@ -156,6 +160,8 @@ catnip_i32_t catnip_clone_delete(catnip_target *target) {
   }
   catnip_mem_free(target->list_table);
   catnip_mem_free(target->variable_table);
+  if (target->edge_hat_keys != CATNIP_NULL) catnip_mem_free(target->edge_hat_keys);
+  if (target->edge_hat_values != CATNIP_NULL) catnip_mem_free(target->edge_hat_values);
   catnip_mem_free(target);
 
   return 1;

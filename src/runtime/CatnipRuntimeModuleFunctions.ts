@@ -117,6 +117,13 @@ export const CatnipRuntimeModuleFunctions = {
     catnip_looks_go_behind: fn<[clone: SpiderNumberType.i32, source: SpiderNumberType.i32]>
         ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
 
+    catnip_edge_hat_poll: fn<[target: SpiderNumberType.i32, key: SpiderNumberType.i32, predicate: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_edge_hat_clear_all: fn<[runtime: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32], undefined),
+    catnip_runtime_reset_timer: fn<[runtime: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32], undefined),
+
     catnip_thread_new: fn<[target: SpiderNumberType.i32, fnprt: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_thread_yield: fn<[thread: SpiderNumberType.i32, fnprt: SpiderNumberType.i32], undefined>
