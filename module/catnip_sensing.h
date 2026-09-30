@@ -19,4 +19,8 @@ catnip_hstring *catnip_sensing_answer_get(void);
 /* Green flag: forget the queue, the answers and any prompt on screen. */
 void catnip_sensing_ask_reset(void);
 
+/* sensing distanceto: distance from `self` to the mouse or another sprite
+   (stage, missing sprite and stage-asking all give scratch's 10000). */
+catnip_f64_t catnip_sensing_distance_to(const catnip_hstring *option, catnip_target *self);
+
 #endif

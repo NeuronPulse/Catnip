@@ -3,6 +3,7 @@ import { op_const } from "../core/const";
 import { op_ask, op_answer } from "./ask";
 import { op_current } from "./current";
 import { op_days_since_2000 } from "./days_since_2000";
+import { op_distanceto } from "./distanceto";
 import { op_get_mouse_x } from "./get_mouse_x";
 import { op_get_mouse_y } from "./get_mouse_y";
 import { op_is_key_down } from "./is_key_down";
@@ -42,4 +43,5 @@ export default {
     sensing_username: op_username,
     sensing_ask: op_ask,
     sensing_answer: op_answer,
+    sensing_distanceto: op_distanceto,
 };

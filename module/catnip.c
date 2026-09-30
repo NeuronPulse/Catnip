@@ -418,3 +418,7 @@ catnip_hstring *CATNIP_EXPORT(catnip_sensing_answer_get)() {
 void CATNIP_EXPORT(catnip_sensing_ask_reset)() {
   catnip_sensing_ask_reset();
 }
+
+catnip_f64_t CATNIP_EXPORT(catnip_sensing_distance_to)(const catnip_hstring *option, catnip_target *self) {
+  return catnip_sensing_distance_to(option, self);
+}

@@ -1,6 +1,7 @@
 
 #include "./catnip_sensing.h"
 #include "./catnip_looks.h"
+#include "./catnip_math.h"
 #include "./catnip_mem.h"
 
 /* ask and wait ----------------------------------------------------------- */
@@ -116,4 +117,60 @@ void catnip_sensing_ask_reset(void) {
   ask_answered = 0;
   sensing_answer = CATNIP_NULL;
   ask_hide_if_showing();
+}
+
+/* distanceto -------------------------------------------------------------- */
+
+/* Compares an hstring to an ASCII literal, e.g. "_mouse_". */
+static catnip_bool_t sensing_is(const catnip_hstring *str, const char *cstr) {
+  if (str == 0) return CATNIP_FALSE;
+
+  catnip_wchar_t *data = catnip_hstring_get_data(str);
+  catnip_ui32_t len = CATNIP_HSTRING_LENGTH(str);
+
+  catnip_ui32_t i = 0;
+  while (cstr[i] != '\0') {
+    if (i >= len) return CATNIP_FALSE;
+    if (data[i] != (catnip_wchar_t)cstr[i]) return CATNIP_FALSE;
+    i++;
+  }
+
+  return i == len;
+}
+
+/* scratch runtime.getSpriteTargetByName: never the stage, never a clone
+   (catnip chains clones in front, so they are skipped explicitly). */
+static catnip_target *sensing_find_sprite(catnip_runtime *runtime, const catnip_hstring *name) {
+  for (catnip_target *t = runtime->targets; t != 0; t = t->next_global) {
+    if (t->flags & CATNIP_TARGET_FLAG_IS_CLONE) continue;
+    if (t->flags & CATNIP_TARGET_FLAG_IS_STAGE) continue;
+    if (t->sprite != 0 && t->sprite->name != 0 && catnip_hstring_equal(t->sprite->name, name))
+      return t;
+  }
+
+  return 0;
+}
+
+/* scratch3_sensing.js distanceTo: the stage is always 10000 away, the mouse
+   is its scratch position, a sprite that exists is its x/y, anything else
+   is 10000. Pure geometry — no bounds, no effects. */
+catnip_f64_t catnip_sensing_distance_to(const catnip_hstring *option, catnip_target *self) {
+  if (self->flags & CATNIP_TARGET_FLAG_IS_STAGE) return 10000.0;
+
+  catnip_f64_t target_x;
+  catnip_f64_t target_y;
+
+  if (sensing_is(option, "_mouse_")) {
+    target_x = self->runtime->io->mouse_x;
+    target_y = self->runtime->io->mouse_y;
+  } else {
+    catnip_target *other = sensing_find_sprite(self->runtime, option);
+    if (other == 0) return 10000.0;
+    target_x = other->position_x;
+    target_y = other->position_y;
+  }
+
+  const catnip_f64_t dx = self->position_x - target_x;
+  const catnip_f64_t dy = self->position_y - target_y;
+  return CATNIP_F64_SQRT((dx * dx) + (dy * dy));
 }
