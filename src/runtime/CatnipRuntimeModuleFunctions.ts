@@ -136,6 +136,8 @@ export const CatnipRuntimeModuleFunctions = {
         ([], undefined),
     catnip_sensing_distance_to: fn<[option: SpiderNumberType.i32, target: SpiderNumberType.i32], SpiderNumberType.f64>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.f64),
+    catnip_sensing_of: fn<[object: SpiderNumberType.i32, property: SpiderNumberType.i32, target: SpiderNumberType.i32], SpiderNumberType.f64>
+        ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.f64),
 
     catnip_thread_new: fn<[target: SpiderNumberType.i32, fnprt: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),

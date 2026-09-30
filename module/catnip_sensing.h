@@ -23,4 +23,8 @@ void catnip_sensing_ask_reset(void);
    (stage, missing sprite and stage-asking all give scratch's 10000). */
 catnip_f64_t catnip_sensing_distance_to(const catnip_hstring *option, catnip_target *self);
 
+/* sensing of: (property) of (object) — scratch getAttributeOf, returning a
+   NaN-boxed string or a plain number. */
+catnip_f64_t catnip_sensing_of(const catnip_hstring *object, const catnip_hstring *property, catnip_target *self);
+
 #endif

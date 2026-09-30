@@ -174,3 +174,73 @@ catnip_f64_t catnip_sensing_distance_to(const catnip_hstring *option, catnip_tar
   const catnip_f64_t dy = self->position_y - target_y;
   return CATNIP_F64_SQRT((dx * dx) + (dy * dy));
 }
+
+/* of ----------------------------------------------------------------------- */
+
+/* NaN-boxes a string into an f64, the catnip_value string encoding. The
+   name pointers here are the same rooted strings every other value path
+   hands around (costume names, variable values). */
+static catnip_f64_t sensing_box_name(const catnip_hstring *name) {
+  catnip_value value;
+  value.parts.lower = (catnip_ui32_t)name;
+  value.parts.upper = CATINP_VALUE_STRING_UPPER;
+  return value.val_double;
+}
+
+/* scratch3_sensing.js getAttributeOf, case for case: the stage-only and
+   sprite-only property switches, then a local-variable lookup by name,
+   then 0. OBJECT resolves exactly like getSpriteTargetByName (_stage_ is
+   the stage, anything else a non-stage original), and a missing target or
+   property gives 0. */
+catnip_f64_t catnip_sensing_of(const catnip_hstring *object, const catnip_hstring *property, catnip_target *self) {
+  catnip_runtime *runtime = self->runtime;
+  catnip_target *attr_target = CATNIP_NULL;
+
+  if (sensing_is(object, "_stage_")) {
+    for (catnip_target *t = runtime->targets; t != CATNIP_NULL; t = t->next_global) {
+      if (t->flags & CATNIP_TARGET_FLAG_IS_STAGE) {
+        attr_target = t;
+        break;
+      }
+    }
+  } else {
+    attr_target = sensing_find_sprite(runtime, object);
+  }
+
+  if (attr_target == CATNIP_NULL) return 0.0;
+
+  if (attr_target->flags & CATNIP_TARGET_FLAG_IS_STAGE) {
+    if (sensing_is(property, "background #") || sensing_is(property, "backdrop #"))
+      return (catnip_f64_t)attr_target->costume + 1.0;
+    if (sensing_is(property, "backdrop name")) {
+      if (attr_target->costume >= attr_target->sprite->costume_count) return 0.0;
+      return sensing_box_name(attr_target->sprite->costumes[attr_target->costume].name);
+    }
+    if (sensing_is(property, "volume"))
+      return (catnip_f64_t)attr_target->volume;
+  } else {
+    if (sensing_is(property, "x position")) return attr_target->position_x;
+    if (sensing_is(property, "y position")) return attr_target->position_y;
+    if (sensing_is(property, "direction")) return attr_target->direction;
+    if (sensing_is(property, "costume #"))
+      return (catnip_f64_t)attr_target->costume + 1.0;
+    if (sensing_is(property, "costume name")) {
+      if (attr_target->costume >= attr_target->sprite->costume_count) return 0.0;
+      return sensing_box_name(attr_target->sprite->costumes[attr_target->costume].name);
+    }
+    if (sensing_is(property, "size")) return attr_target->size;
+    if (sensing_is(property, "volume"))
+      return (catnip_f64_t)attr_target->volume;
+  }
+
+  /* The property may be a local variable's name (scratch falls through to
+     lookupVariableByNameAndType); values sit in the target's own table. */
+  for (catnip_ui32_t i = 0; i < attr_target->sprite->variable_count; i++) {
+    catnip_variable *variable = attr_target->sprite->variables[i];
+    if (variable != CATNIP_NULL && variable->name != CATNIP_NULL &&
+        catnip_hstring_equal(variable->name, property))
+      return attr_target->variable_table[i].val_double;
+  }
+
+  return 0.0;
+}

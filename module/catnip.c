@@ -422,3 +422,7 @@ void CATNIP_EXPORT(catnip_sensing_ask_reset)() {
 catnip_f64_t CATNIP_EXPORT(catnip_sensing_distance_to)(const catnip_hstring *option, catnip_target *self) {
   return catnip_sensing_distance_to(option, self);
 }
+
+catnip_f64_t CATNIP_EXPORT(catnip_sensing_of)(const catnip_hstring *object, const catnip_hstring *property, catnip_target *self) {
+  return catnip_sensing_of(object, property, self);
+}

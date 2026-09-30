@@ -8,6 +8,7 @@ import { op_get_mouse_x } from "./get_mouse_x";
 import { op_get_mouse_y } from "./get_mouse_y";
 import { op_is_key_down } from "./is_key_down";
 import { op_is_mouse_down } from "./is_mouse_down";
+import { op_of } from "./of";
 import { op_timer_get } from "./timer_get";
 import { op_timer_reset } from "./timer_reset";
 import { op_username } from "./username";
@@ -44,4 +45,5 @@ export default {
     sensing_ask: op_ask,
     sensing_answer: op_answer,
     sensing_distanceto: op_distanceto,
+    sensing_of: op_of,
 };
