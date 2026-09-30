@@ -68,6 +68,9 @@ catnip_target *catnip_clone_create(catnip_target *source) {
   clone->flags |= CATNIP_TARGET_FLAG_IS_CLONE;
   if (source->flags & CATNIP_TARGET_FLAG_IS_VISIBLE)
     clone->flags |= CATNIP_TARGET_FLAG_IS_VISIBLE;
+  /* scratch makeClone: newClone.draggable = this.draggable. */
+  if (source->flags & CATNIP_TARGET_FLAG_IS_DRAGGABLE)
+    clone->flags |= CATNIP_TARGET_FLAG_IS_DRAGGABLE;
 
   clone->position_x = source->position_x;
   clone->position_y = source->position_y;

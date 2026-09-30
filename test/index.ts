@@ -56,9 +56,11 @@ async function main() {
             // left to say "end" with, so it says this instead and the run ends
             // when the last thread does.
             let expectStopped = false;
-            // Key events a "keydown"/"keyup" say asked for, sent between steps:
-            // a project cannot re-enter its own runtime from inside a step.
-            const pendingEvents: [CatnipEventID, number][] = [];
+            // Key and mouse events a say asked for, sent between steps: a
+            // project cannot re-enter its own runtime from inside a step.
+            // Closures so words can drive the module's mouse helpers, not
+            // only raw events.
+            const pendingEvents: (() => void)[] = [];
             // Answers pre-queued by the fixture ("answer 42" said before it
             // asks); an ask with no queued answer is answered with its own
             // question text, so no fixture can deadlock the harness.
@@ -100,12 +102,13 @@ async function main() {
                                 expectStopped = true;
                                 break;
                             case "keydown":
-                            case "keyup":
-                                pendingEvents.push([
-                                    command === "keydown" ? "IO_KEY_PRESSED" : "IO_KEY_RELEASED",
-                                    Number(arg)
-                                ]);
+                            case "keyup": {
+                                const eventID: CatnipEventID =
+                                    command === "keydown" ? "IO_KEY_PRESSED" : "IO_KEY_RELEASED";
+                                const code = Number(arg);
+                                pendingEvents.push(() => projectModule?.triggerEvent(eventID, code));
                                 break;
+                            }
                             // "answer <text>" pre-queues the answer for the
                             // project's next "ask and wait".
                             case "answer":
@@ -113,9 +116,39 @@ async function main() {
                                 break;
                             // "click N" clicks target N (0 = stage, sprites
                             // follow in project order); the index becomes the
-                            // target's pointer when the event is flushed.
-                            case "click":
-                                pendingEvents.push(["IO_CLICK_TARGET", Number(arg)]);
+                            // target's pointer when the event is flushed. A
+                            // draggable target starts a drag instead — the
+                            // module owns scratch's mouse.js click rules.
+                            case "click": {
+                                const slot = Number(arg);
+                                pendingEvents.push(() => projectModule?.mousePick(slot));
+                                break;
+                            }
+                            // "mousedown <slot>" = mouse down + pick in that
+                            // order (what the page sends on a real press);
+                            // "mousemove <x> <y>" moves the mouse and drags
+                            // a held target; "mouseup" releases it.
+                            case "mousedown": {
+                                const slot = Number(arg);
+                                pendingEvents.push(() => {
+                                    projectModule?.triggerEvent("IO_MOUSE_DOWN");
+                                    projectModule?.mousePick(slot);
+                                });
+                                break;
+                            }
+                            case "mousemove": {
+                                const parts = arg.split(/\s+/);
+                                const x = Number(parts[0]);
+                                const y = Number(parts[1]);
+                                if (parts.length !== 2 || Number.isNaN(x) || Number.isNaN(y)) {
+                                    t.fail(`Bad mousemove protocol word: ${message}`);
+                                    break;
+                                }
+                                pendingEvents.push(() => projectModule?.mouseMove(x, y));
+                                break;
+                            }
+                            case "mouseup":
+                                pendingEvents.push(() => projectModule?.mouseUp());
                                 break;
                             // "draw <target> <field> <value>" asserts the
                             // live draw state (the same packing frame() sends
@@ -216,17 +249,7 @@ async function main() {
 
             do {
                 while (pendingEvents.length !== 0) {
-                    const [eventID, arg] = pendingEvents.shift()!;
-                    if (eventID === "IO_CLICK_TARGET") {
-                        // The number is a draw-state slot index (0 = stage,
-                        // originals follow, then any live clone); the event
-                        // carries the pointer of the target in that slot.
-                        const targetPointer = projectModule!.getTargetPointer(arg);
-                        if (targetPointer !== 0)
-                            projectModule!.triggerEvent("IO_CLICK_TARGET", targetPointer);
-                    } else {
-                        projectModule.triggerEvent(eventID, arg);
-                    }
+                    pendingEvents.shift()!();
                 }
 
                 projectModule.step();

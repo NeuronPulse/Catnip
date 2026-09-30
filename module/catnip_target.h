@@ -11,6 +11,9 @@ typedef catnip_ui32_t catnip_target_flags;
 #define CATNIP_TARGET_FLAG_IS_CLONE CATNIP_TARGET_FLAG(0)
 #define CATNIP_TARGET_FLAG_IS_STAGE CATNIP_TARGET_FLAG(1)
 #define CATNIP_TARGET_FLAG_IS_VISIBLE CATNIP_TARGET_FLAG(2)
+/* scratch target.draggable: set by sensing set drag mode (and loaded from
+   the project), read by the host's mouse handling. */
+#define CATNIP_TARGET_FLAG_IS_DRAGGABLE CATNIP_TARGET_FLAG(3)
 
 /* Rotation styles, as scratch-vm stores them (RenderedTarget.ROTATION_*
    strings) packed into the target struct as small integers. */

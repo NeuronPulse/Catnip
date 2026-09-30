@@ -1,7 +1,7 @@
 import { WasmStructWrapper } from "../wasm-interop/wasm-types";
 import { CatnipSprite } from "./CatnipSprite";
 import { CatnipVariableID } from "./CatnipVariable";
-import { CatnipWasmStructTarget, CATNIP_TARGET_FLAG_IS_STAGE, CATNIP_TARGET_FLAG_IS_VISIBLE, CATNIP_ROTATION_STYLE_ALL_AROUND, CATNIP_ROTATION_STYLE_LEFT_RIGHT, CATNIP_ROTATION_STYLE_NONE } from '../wasm-interop/CatnipWasmStructTarget';
+import { CatnipWasmStructTarget, CATNIP_TARGET_FLAG_IS_STAGE, CATNIP_TARGET_FLAG_IS_VISIBLE, CATNIP_TARGET_FLAG_IS_DRAGGABLE, CATNIP_ROTATION_STYLE_ALL_AROUND, CATNIP_ROTATION_STYLE_LEFT_RIGHT, CATNIP_ROTATION_STYLE_NONE } from '../wasm-interop/CatnipWasmStructTarget';
 import { CatnipListID } from "./CatnipList";
 import { CatnipWasmStructValue, CatnipWasmUnionValue } from "../wasm-interop/CatnipWasmStructValue";
 import { Cast } from "../compiler/cast";
@@ -21,6 +21,8 @@ export interface CatnipTargetDesc {
 
     /** How the sprite rotates; the stage is always "all around". */
     rotationStyle: "all around" | "left-right" | "don't rotate";
+    /** Scratch's target.draggable — whether the sprite can be dragged. */
+    draggable: boolean;
     /** Scratch's saved z-order: higher layers are drawn in front. */
     layerOrder: number;
 }
@@ -166,6 +168,8 @@ export class CatnipTarget {
 
         let flags = desc.isStage ? CATNIP_TARGET_FLAG_IS_STAGE : 0;
         if (desc.visible) flags |= CATNIP_TARGET_FLAG_IS_VISIBLE;
+        // scratch RenderedTarget.update reads draggable from the project data.
+        if (desc.draggable) flags |= CATNIP_TARGET_FLAG_IS_DRAGGABLE;
 
         this.structWrapper.setMember("flags", flags);
     }

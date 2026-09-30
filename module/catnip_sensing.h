@@ -27,4 +27,7 @@ catnip_f64_t catnip_sensing_distance_to(const catnip_hstring *option, catnip_tar
    NaN-boxed string or a plain number. */
 catnip_f64_t catnip_sensing_of(const catnip_hstring *object, const catnip_hstring *property, catnip_target *self);
 
+/* sensing set drag mode: 1.0 = draggable, 0.0 = not draggable. */
+void catnip_sensing_set_drag_mode(catnip_f64_t mode, catnip_target *self);
+
 #endif

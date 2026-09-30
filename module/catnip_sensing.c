@@ -244,3 +244,15 @@ catnip_f64_t catnip_sensing_of(const catnip_hstring *object, const catnip_hstrin
 
   return 0.0;
 }
+
+/* setdragmode ------------------------------------------------------------- */
+
+/* scratch3_sensing.js setDragMode: DRAG_MODE === 'draggable' flips
+   target.draggable; the actual dragging lives in the host (scratch-gui
+   does it), which reads the flag back through the mouse handling. */
+void catnip_sensing_set_drag_mode(catnip_f64_t mode, catnip_target *self) {
+  if (mode != 0.0)
+    self->flags |= CATNIP_TARGET_FLAG_IS_DRAGGABLE;
+  else
+    self->flags &= ~((catnip_ui32_t)CATNIP_TARGET_FLAG_IS_DRAGGABLE);
+}

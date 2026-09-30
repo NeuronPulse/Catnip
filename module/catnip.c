@@ -426,3 +426,7 @@ catnip_f64_t CATNIP_EXPORT(catnip_sensing_distance_to)(const catnip_hstring *opt
 catnip_f64_t CATNIP_EXPORT(catnip_sensing_of)(const catnip_hstring *object, const catnip_hstring *property, catnip_target *self) {
   return catnip_sensing_of(object, property, self);
 }
+
+void CATNIP_EXPORT(catnip_sensing_set_drag_mode)(catnip_f64_t mode, catnip_target *self) {
+  catnip_sensing_set_drag_mode(mode, self);
+}

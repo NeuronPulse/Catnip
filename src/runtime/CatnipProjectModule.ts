@@ -8,7 +8,7 @@ import { CatnipRuntimeGcStats, CatnipWasmStructRuntimeGcStats } from '../wasm-in
 import { CatnipBubbleUpdate, DRAW_STATE, DRAW_STATE_STRIDE } from "./ICatnipRenderer";
 import { CatnipWasmStructHeapString } from "../wasm-interop/CatnipWasmStructHeapString";
 import UTF16 from "../utf16";
-import { CATNIP_TARGET_FLAG_IS_VISIBLE, CatnipWasmStructTarget } from "../wasm-interop/CatnipWasmStructTarget";
+import { CATNIP_TARGET_FLAG_IS_DRAGGABLE, CATNIP_TARGET_FLAG_IS_VISIBLE, CatnipWasmStructTarget } from "../wasm-interop/CatnipWasmStructTarget";
 
 export type CatnipProjectModuleEvent<TEvnetID extends CatnipEventID = CatnipEventID> = { id: TEvnetID, exportName: string };
 
@@ -34,6 +34,11 @@ export class CatnipProjectModule {
     private _slotSpriteIndex: number[];
     private _freeSlots: number[];
     private _spriteIndexBySpritePtr: Map<number, number>;
+
+    // The mouse pick that started a drag (scratch-gui's job in front of
+    // scratch-vm), with whether the cursor moved while it was held.
+    private _dragTarget: number = 0;
+    private _dragMoved: boolean = false;
 
     /** @internal */
     constructor(project: CatnipProject, instance: WebAssembly.Instance, events: CatnipProjectModuleEvent[]) {
@@ -140,6 +145,49 @@ export class CatnipProjectModule {
         if (index < 0 || index >= this._slots.length) return 0;
         const wrapper = this._slots[index];
         return wrapper === null ? 0 : wrapper.ptr;
+    }
+
+    /**
+     * A mouse pick landed on draw-state slot `index`. Scratch's click rules
+     * (mouse.js postData): a non-draggable target clicks on mouse down, a
+     * draggable one starts a drag instead and only clicks on mouse up — and
+     * never when the cursor moved in between (`wasDragged`).
+     */
+    public mousePick(index: number): void {
+        const ptr = this.getTargetPointer(index);
+        if (ptr === 0) return;
+
+        const flags = this.runtimeModule.memory.getUint32(
+            ptr + CatnipWasmStructTarget.getMemberOffset("flags"), true);
+        if ((flags & CATNIP_TARGET_FLAG_IS_DRAGGABLE) !== 0) {
+            this._dragTarget = ptr;
+            this._dragMoved = false;
+        } else {
+            this.triggerEvent("IO_CLICK_TARGET", ptr);
+        }
+    }
+
+    /** Mouse move: the sensing position, plus dragging a held target. */
+    public mouseMove(x: number, y: number): void {
+        this.triggerEvent("IO_MOUSE_MOVE", x, y);
+
+        if (this._dragTarget !== 0) {
+            this._dragMoved = true;
+            this.runtimeModule.functions.catnip_target_set_xy(x, y, this._dragTarget);
+        }
+    }
+
+    /** Mouse up: end any drag, clicking the dragged target only if it did
+     *  not actually move (scratch's wasDragged rule). */
+    public mouseUp(): void {
+        this.triggerEvent("IO_MOUSE_UP");
+
+        if (this._dragTarget !== 0) {
+            const ptr = this._dragTarget;
+            this._dragTarget = 0;
+            if (!this._dragMoved)
+                this.triggerEvent("IO_CLICK_TARGET", ptr);
+        }
     }
 
     public triggerEvent<TEventID extends CatnipEventID>(event: TEventID, ...args: CatnipEventArgs<TEventID>): boolean {

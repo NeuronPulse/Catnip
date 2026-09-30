@@ -487,6 +487,9 @@ function readTargetMeta(meta: SB3ReadMetadata, target: ProjectSB3Target): Catnip
             size: target.isStage ? 100 : target.size,
             currentCostume: target.currentCostume,
             rotationStyle: target.isStage ? "all around" : target.rotationStyle,
+            // scratch never drags the stage; sprites start draggable only
+            // when the project says so (RenderedTarget.update).
+            draggable: target.isStage ? false : target.draggable,
             layerOrder: target.layerOrder
         }
     };

@@ -7,6 +7,7 @@ import { WasmInt32, WasmPtr, WasmStruct, WasmUInt32, WasmPtrVoid, WasmArray, Was
 export const CATNIP_TARGET_FLAG_IS_CLONE = 1 << 0;
 export const CATNIP_TARGET_FLAG_IS_STAGE = 1 << 1;
 export const CATNIP_TARGET_FLAG_IS_VISIBLE = 1 << 2;
+export const CATNIP_TARGET_FLAG_IS_DRAGGABLE = 1 << 3;
 
 /** Mirrors CATNIP_ROTATION_STYLE_* in module/catnip_target.h. */
 export const CATNIP_ROTATION_STYLE_ALL_AROUND = 0;

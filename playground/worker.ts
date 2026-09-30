@@ -299,21 +299,20 @@ async function main() {
                 projectModule.triggerEvent(message.down ? "IO_KEY_PRESSED" : "IO_KEY_RELEASED", message.keyCode);
                 break;
             case "mouseMove":
-                projectModule.triggerEvent("IO_MOUSE_MOVE", message.x, message.y);
+                projectModule.mouseMove(message.x, message.y);
                 break;
             case "mouseDown":
                 projectModule.triggerEvent("IO_MOUSE_DOWN");
                 break;
             case "mouseUp":
-                projectModule.triggerEvent("IO_MOUSE_UP");
+                projectModule.mouseUp();
                 break;
             case "click": {
                 // The pick is an index in draw-state slot order — the
-                // originals in project order, then any live clone — and the
-                // event carries the pointer of the target actually clicked.
-                const ptr = projectModule.getTargetPointer(message.targetIndex);
-                if (ptr !== 0)
-                    projectModule.triggerEvent("IO_CLICK_TARGET", ptr);
+                // originals in project order, then any live clone. Whether
+                // it clicks now or starts a drag is the module's call
+                // (scratch's mouse.js click rules).
+                projectModule.mousePick(message.targetIndex);
                 break;
             }
             case "stepRate":
