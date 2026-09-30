@@ -10,3 +10,4 @@ worker.js.map
 .fuse_hidden*
 .tap
 scratch-vm/
+scratch-gui/
