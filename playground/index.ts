@@ -15,6 +15,7 @@ type WorkerMessage =
     | { kind: "stepRate", hz: number }
     | { kind: "progress", pct: number, label: string }
     | { kind: "log", entries: { level: string, text: string }[] }
+    | { kind: "ask", question: string | null }
     | { kind: "ready" }
     | { kind: "error", message: string };
 
@@ -57,6 +58,9 @@ async function main() {
     const barFill = document.getElementById("bar-fill");
     const barLabel = document.getElementById("bar-label");
     const logElement = document.getElementById("log");
+    const askElement = document.getElementById("ask");
+    const askText = document.getElementById("ask-text");
+    const askInput = document.getElementById("ask-input") as HTMLInputElement | null;
 
     runButton?.setAttribute("disabled", "");
 
@@ -107,6 +111,28 @@ async function main() {
     // location.search, which a bare Worker URL would leave empty.
     const worker = new Worker("worker.js" + location.search);
 
+    // Ask and wait: the worker's C-side queue calls onAskQuestion here; the
+    // answer goes straight back into the queue through the answer message.
+    function submitAnswer(): void {
+        if (askElement === null || askInput === null) return;
+        worker.postMessage({ kind: "answer", text: askInput.value });
+        askInput.value = "";
+        askElement.style.display = "none";
+    }
+
+    askInput?.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            submitAnswer();
+        }
+        // While the answer box has focus, typing is for the project's
+        // answer block, not for the scratch key listeners on document.
+        event.stopPropagation();
+    });
+
+    document.getElementById("ask-ok")?.addEventListener("click", submitAnswer);
+    askElement?.addEventListener("click", () => askInput?.focus());
+
     let drawPending = false;
 
     function draw() {
@@ -124,16 +150,24 @@ async function main() {
 
     function attachInput() {
         document.addEventListener("keydown", (event) => {
+            if (event.target instanceof HTMLInputElement) return;
             const keyCode = scratchKeyCode(event);
             if (keyCode === null) return;
             worker.postMessage({ kind: "key", down: true, keyCode });
         });
 
         document.addEventListener("keyup", (event) => {
+            if (event.target instanceof HTMLInputElement) return;
             const keyCode = scratchKeyCode(event);
             if (keyCode === null) return;
             worker.postMessage({ kind: "key", down: false, keyCode });
         });
+
+        // Clicks on the ask prompt belong to the answer box, not to the
+        // project's mouse state or click hats (scratch's mouse guards the
+        // ask input the same way).
+        const onAskUI = (event: Event) =>
+            (event.target as HTMLElement | null)?.closest?.("#ask") != null;
 
         document.addEventListener("mousemove", (event) => {
             const canvasElement = renderer.canvasElement;
@@ -150,11 +184,13 @@ async function main() {
             worker.postMessage({ kind: "mouseMove", x: centeredX * 480, y: -centeredY * 360 });
         });
 
-        document.addEventListener("mouseup", () => {
+        document.addEventListener("mouseup", (event) => {
+            if (onAskUI(event)) return;
             worker.postMessage({ kind: "mouseUp" });
         });
 
         document.addEventListener("mousedown", (event) => {
+            if (onAskUI(event)) return;
             worker.postMessage({ kind: "mouseDown" });
 
             const canvasElement = renderer.canvasElement;
@@ -220,6 +256,15 @@ async function main() {
             case "log":
                 appendLog(message.entries.map((entry) =>
                     (entry.level === "warn" ? "[warn] " : entry.level === "error" ? "[error] " : "") + entry.text));
+                break;
+            case "ask":
+                if (message.question === null) {
+                    if (askElement !== null) askElement.style.display = "none";
+                } else {
+                    if (askText !== null) askText.textContent = message.question;
+                    if (askElement !== null) askElement.style.display = "flex";
+                    askInput?.focus();
+                }
                 break;
             case "ready":
                 attachInput();

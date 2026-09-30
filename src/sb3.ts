@@ -778,7 +778,51 @@ type SB3BlockTypeDefinition = {
     "sensing_mousey": {},
     "sensing_mousedown": {},
     "sensing_timer": {},
-    "sensing_resettimer": {}
+    "sensing_resettimer": {},
+
+    "sensing_answer": {},
+    "sensing_username": {},
+    "sensing_userid": {},
+    "sensing_loudness": {},
+    "sensing_current": {
+        fields: {
+            "CURRENTMENU": ProjectSB3Field<null,
+                "YEAR" | "MONTH" | "DATE" | "DAYOFWEEK" | "HOUR" | "MINUTE" | "SECOND">
+        }
+    },
+    "sensing_askandwait": {
+        inputs: {
+            "QUESTION": ProjectSB3Input
+        }
+    },
+    "sensing_distanceto": {
+        inputs: {
+            "DISTANCETOMENU": ProjectSB3Input
+        }
+    },
+    "sensing_distancetomenu": {
+        fields: {
+            "DISTANCETOMENU": ProjectSB3Field<null>
+        }
+    },
+    "sensing_setdragmode": {
+        fields: {
+            "DRAG_MODE": ProjectSB3Field<null, "draggable" | "not draggable">
+        }
+    },
+    "sensing_of": {
+        inputs: {
+            "OBJECT": ProjectSB3Input
+        },
+        fields: {
+            "PROPERTY": ProjectSB3Field<string>
+        }
+    },
+    "sensing_of_object_menu": {
+        fields: {
+            "OBJECT": ProjectSB3Field<null>
+        }
+    },
 
     "data_variable": {
         fields: {

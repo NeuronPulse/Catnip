@@ -8,6 +8,10 @@ void CATNIP_IMPORT(catnip_import_log)(const catnip_wchar_t *str_ptr, catnip_ui32
 void CATNIP_IMPORT(catnip_import_render_pen_draw_lines)(const catnip_pen_line *lines, catnip_ui32_t line_length);
 catnip_hstring *CATNIP_IMPORT(catnip_import_get_canon_string)(const catnip_wchar_t *str, catnip_ui32_t str_length);
 catnip_ui64_t CATNIP_IMPORT(catnip_import_time)();
+/* "ask and wait" prompt: show puts the question up in the host UI, hide
+   takes it down (no question left to answer). */
+void CATNIP_IMPORT(catnip_import_ask_show)(const catnip_wchar_t *str_ptr, catnip_ui32_t str_length);
+void CATNIP_IMPORT(catnip_import_ask_hide)();
 /** Milliseconds from a monotonic clock, used for scheduling. Cheap enough to
  * call from generated code, unlike the absolute wall clock. */
 catnip_f64_t CATNIP_IMPORT(catnip_import_perf_time)();

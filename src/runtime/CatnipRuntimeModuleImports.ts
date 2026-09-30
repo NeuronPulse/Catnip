@@ -11,6 +11,8 @@ export interface CatnipRuntimeModuleImports {
         catnip_import_get_canon_string: (strPtr: number, strLength: number) => number;
         catnip_import_time: () => bigint,
         catnip_import_perf_time: () => number,
+        catnip_import_ask_show: (strPtr: number, strLength: number) => void;
+        catnip_import_ask_hide: () => void;
     },
 
     env: {

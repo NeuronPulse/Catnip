@@ -124,6 +124,17 @@ export const CatnipRuntimeModuleFunctions = {
     catnip_runtime_reset_timer: fn<[runtime: SpiderNumberType.i32]>
         ([SpiderNumberType.i32], undefined),
 
+    catnip_sensing_ask: fn<[question: SpiderNumberType.i32, target: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_sensing_ask_done: fn<[ticket: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_sensing_answer_set: fn<[answer: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32], undefined),
+    catnip_sensing_answer_get: fn<[], SpiderNumberType.i32>
+        ([], SpiderNumberType.i32),
+    catnip_sensing_ask_reset: fn<[]>
+        ([], undefined),
+
     catnip_thread_new: fn<[target: SpiderNumberType.i32, fnprt: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_thread_yield: fn<[thread: SpiderNumberType.i32, fnprt: SpiderNumberType.i32], undefined>

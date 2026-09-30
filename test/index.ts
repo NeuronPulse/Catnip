@@ -59,6 +59,10 @@ async function main() {
             // Key events a "keydown"/"keyup" say asked for, sent between steps:
             // a project cannot re-enter its own runtime from inside a step.
             const pendingEvents: [CatnipEventID, number][] = [];
+            // Answers pre-queued by the fixture ("answer 42" said before it
+            // asks); an ask with no queued answer is answered with its own
+            // question text, so no fixture can deadlock the harness.
+            const pendingAnswers: string[] = [];
 
             registerSB3CommandBlock("looks_say", (ctx, block) =>
                 op_say_and_report.create({
@@ -101,6 +105,11 @@ async function main() {
                                     command === "keydown" ? "IO_KEY_PRESSED" : "IO_KEY_RELEASED",
                                     Number(arg)
                                 ]);
+                                break;
+                            // "answer <text>" pre-queues the answer for the
+                            // project's next "ask and wait".
+                            case "answer":
+                                pendingAnswers.push(arg);
                                 break;
                             // "click N" clicks target N (0 = stage, sprites
                             // follow in project order); the index becomes the
@@ -193,6 +202,16 @@ async function main() {
                 enable_optimization_variable_inlining_force: true,                
             });
 
+            // The show hook runs inside the project's step; the harness only
+            // records the question there and answers after step() returns, so
+            // the asking thread really suspends across at least one step
+            // boundary (and no wasm re-enters itself). With no queued answer
+            // the question itself is echoed back, so no fixture can deadlock.
+            let shownQuestion: string | null = null;
+            projectModule.runtimeModule.onAskQuestion = (question) => {
+                shownQuestion = question;
+            };
+
             projectModule.start();
 
             do {
@@ -211,6 +230,14 @@ async function main() {
                 }
 
                 projectModule.step();
+
+                if (shownQuestion !== null) {
+                    const question = shownQuestion;
+                    shownQuestion = null;
+                    const answer = pendingAnswers.length > 0 ? pendingAnswers.shift()! : question;
+                    projectModule.runtimeModule.functions.catnip_sensing_answer_set(
+                        projectModule.runtimeModule.createCanonHString(answer));
+                }
             } while (!didEnd && projectModule.hasRunningThreads());
 
             if (!didEnd) {

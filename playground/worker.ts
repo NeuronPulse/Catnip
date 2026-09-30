@@ -46,6 +46,7 @@ type ToMainMessage =
     | { kind: "stepRate", hz: number }
     | { kind: "progress", pct: number, label: string }
     | { kind: "log", entries: LogEntry[] }
+    | { kind: "ask", question: string | null }
     | { kind: "ready" }
     | { kind: "error", message: string };
 
@@ -56,6 +57,7 @@ type FromMainMessage =
     | { kind: "mouseUp" }
     | { kind: "click", targetIndex: number }
     | { kind: "stepRate", hz: number }
+    | { kind: "answer", text: string }
     | { kind: "event", id: string, args: number[] };
 
 // `self` is typed as Window by the DOM lib, so narrow it to a worker scope manually.
@@ -258,6 +260,11 @@ async function main() {
     });
     phase("run (read project)");
 
+    // The ask prompt crosses to the page as a message; answers come back
+    // through the same channel and into the C-side queue.
+    project.runtimeModule.onAskQuestion = (question) =>
+        workerScope.postMessage({ kind: "ask", question });
+
     progress(62, "compiling");
     await yieldForDelivery();
     const projectModule = await project.compile({
@@ -312,6 +319,12 @@ async function main() {
             case "stepRate":
                 setStepRate(message.hz);
                 break;
+            case "answer": {
+                const functions = project.runtimeModule.functions;
+                functions.catnip_sensing_answer_set(
+                    project.runtimeModule.createCanonHString(message.text));
+                break;
+            }
             case "event":
                 projectModule.triggerEvent(message.id as any, ...message.args);
                 break;

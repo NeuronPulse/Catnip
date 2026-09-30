@@ -54,6 +54,13 @@ export class CatnipRuntimeModule {
                 },
                 catnip_import_time: () => BigInt(Date.now()),
                 catnip_import_perf_time: () => performance.now(),
+                catnip_import_ask_show: (strPtr: number, strLength: number) => {
+                    const str = UTF16.decode(runtimeModule.memory.buffer.slice(strPtr, strPtr + (strLength * 2)));
+                    runtimeModule.onAskQuestion?.(str);
+                },
+                catnip_import_ask_hide: () => {
+                    runtimeModule.onAskQuestion?.(null);
+                },
             },
 
             env: {
@@ -80,6 +87,13 @@ export class CatnipRuntimeModule {
     public readonly instance: WebAssembly.Instance;
     public readonly imports: CatnipRuntimeModuleImports;
     public readonly functions: CatnipRuntimeModuleFunctionsObject;
+
+    /**
+     * The host's "ask and wait" prompt: called with the question when one
+     * reaches the front of the queue, with null when the prompt should go
+     * away. The host answers with the catnip_sensing_answer_set export.
+     */
+    public onAskQuestion: ((question: string | null) => void) | null = null;
 
     private _memory: DataView | null;
     public get memory(): DataView {

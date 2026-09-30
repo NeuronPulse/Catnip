@@ -174,6 +174,8 @@ export class CatnipProjectModule {
         // edge-activated hat values, so "when timer > N" re-arms per run.
         this.runtimeModule.functions.catnip_runtime_reset_timer(this.runtimeInstance.ptr);
         this.runtimeModule.functions.catnip_edge_hat_clear_all(this.runtimeInstance.ptr);
+        // greenFlag also drops any pending ask-and-wait queue and its answer.
+        this.runtimeModule.functions.catnip_sensing_ask_reset();
         this.triggerEvent("PROJECT_START");
     }
 

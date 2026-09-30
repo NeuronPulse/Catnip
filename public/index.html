@@ -45,12 +45,30 @@
             white-space: pre-wrap;
             word-break: break-all;
         }
+        #ask {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin: 6px 0;
+            font: 11px monospace;
+            color: #333;
+        }
+        #ask-input {
+            font: 11px monospace;
+            border: 1px solid #999;
+            padding: 1px 3px;
+            width: 240px;
+        }
+        #ask-ok {
+            font: 11px monospace;
+        }
     </style>
 </head>
 <body>
     <button id="run" onclick="main()">Run!</button>
     <div id="status"><div id="bar"><div id="bar-fill"></div></div><span id="bar-label"></span></div>
     <canvas id="canvas" width=960 height=720></canvas>
+    <div id="ask"><span id="ask-text"></span><input id="ask-input" type="text"><button id="ask-ok">OK</button></div>
     <div id="log"></div>
 </body>
 </html>

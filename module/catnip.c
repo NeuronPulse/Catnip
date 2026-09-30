@@ -3,6 +3,7 @@
 #include "./catnip_motion.h"
 #include "./catnip_looks.h"
 #include "./catnip_clone.h"
+#include "./catnip_sensing.h"
 
 void CATNIP_EXPORT(catnip_init)() {
   catnip_strings_init();
@@ -396,4 +397,24 @@ void CATNIP_EXPORT(catnip_edge_hat_clear_all)(catnip_runtime *runtime) {
 
 void CATNIP_EXPORT(catnip_runtime_reset_timer)(catnip_runtime *runtime) {
   catnip_runtime_reset_timer(runtime);
+}
+
+catnip_ui32_t CATNIP_EXPORT(catnip_sensing_ask)(catnip_hstring *question, catnip_target *target) {
+  return catnip_sensing_ask(question, target);
+}
+
+catnip_bool_t CATNIP_EXPORT(catnip_sensing_ask_done)(catnip_ui32_t ticket) {
+  return catnip_sensing_ask_done(ticket);
+}
+
+void CATNIP_EXPORT(catnip_sensing_answer_set)(catnip_hstring *answer) {
+  catnip_sensing_answer_set(answer);
+}
+
+catnip_hstring *CATNIP_EXPORT(catnip_sensing_answer_get)() {
+  return catnip_sensing_answer_get();
+}
+
+void CATNIP_EXPORT(catnip_sensing_ask_reset)() {
+  catnip_sensing_ask_reset();
 }
