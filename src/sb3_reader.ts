@@ -502,8 +502,7 @@ export function readSB3(sb3: ProjectSB3, partialConfig?: Partial<SB3ReadConfig>)
 
     let config: SB3ReadConfig = partialConfig ? Object.assign(createDefaultSB3ReadConfig(), partialConfig) : createDefaultSB3ReadConfig();
 
-    // const sb3Start = 
-    console.time("SB3 Parse");
+    const sb3ParseStart = performance.now();
 
     const meta = new SB3ReadMetadata(config);
 
@@ -520,7 +519,7 @@ export function readSB3(sb3: ProjectSB3, partialConfig?: Partial<SB3ReadConfig>)
         scriptReader.readScripts();
     }
 
-    console.timeEnd("SB3 Parse");
+    SB3ReadLogger.log(`parse: ${(performance.now() - sb3ParseStart).toFixed(1)}ms`);
     return {
         sprites: spritesDesc,
         unsupportedOpcodes: meta.unsupportedOpcodes

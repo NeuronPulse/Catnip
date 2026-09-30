@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Document</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- The page bundle never touches jszip (only the worker unzips .sb3),
+         so no CDN script: the demo loads offline. -->
     <script src="bundle.js"></script>
     <style>
         /* scratch-render's resize() grows the canvas backing store with the
@@ -12,10 +13,44 @@
             width: 960px;
             height: 720px;
         }
+        #status {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin: 6px 0;
+            font: 11px monospace;
+            color: #333;
+        }
+        #bar {
+            width: 240px;
+            height: 6px;
+            border: 1px solid #999;
+            background: #fff;
+        }
+        #bar-fill {
+            width: 0%;
+            height: 100%;
+            background: #333;
+        }
+        #log {
+            display: none;
+            font: 11px monospace;
+            color: #222;
+            background: #fff;
+            border: 1px solid #ccc;
+            margin: 6px 0;
+            padding: 4px;
+            max-height: 140px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
-    <button onclick="main()">Run!</button>
+    <button id="run" onclick="main()">Run!</button>
+    <div id="status"><div id="bar"><div id="bar-fill"></div></div><span id="bar-label"></span></div>
     <canvas id="canvas" width=960 height=720></canvas>
+    <div id="log"></div>
 </body>
 </html>

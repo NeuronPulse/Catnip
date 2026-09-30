@@ -48,8 +48,20 @@ export class CatnipProject {
      */
     private _assetZip: JSZip | null = null;
 
+    /**
+     * Inflated asset bytes keyed by md5ext. The playground inflates every
+     * costume twice today — once to measure its bounds, once to ship it to the
+     * page — and a 174MB project deserves paying that only once. Released with
+     * clearAssetCache() once the page holds the buffers.
+     */
+    private readonly _assetCache: Map<string, Uint8Array> = new Map();
+
     public setAssetZip(zip: JSZip): void {
         this._assetZip = zip;
+    }
+
+    public clearAssetCache(): void {
+        this._assetCache.clear();
     }
 
     /**
@@ -57,6 +69,9 @@ export class CatnipProject {
      * its file name as costumes refer to it ("md5.ext").
      */
     public async readAsset(md5ext: string): Promise<Uint8Array> {
+        const cached = this._assetCache.get(md5ext);
+        if (cached !== undefined) return cached;
+
         const zip = this._assetZip;
 
         if (zip === null)
@@ -68,7 +83,9 @@ export class CatnipProject {
             if (path.includes("__MACOSX/")) continue;
             if (path.split("/").pop() !== md5ext) continue;
 
-            return entry.async("uint8array");
+            const data = await entry.async("uint8array");
+            this._assetCache.set(md5ext, data);
+            return data;
         }
 
         throw new Error(`The project zip does not contain the asset '${md5ext}'.`);
@@ -126,9 +143,9 @@ export class CatnipProject {
     public async compile(config?: Partial<CatnipCompilerConfig>): Promise<CatnipProjectModule> {
         const compiler = new CatnipCompiler(this, config);
 
-        console.time("compile");
+        const start = performance.now();
         const module = await compiler.createModule();
-        console.timeEnd("compile");
+        logger.log(`compile: ${(performance.now() - start).toFixed(1)}ms`);
 
         return module;
     }

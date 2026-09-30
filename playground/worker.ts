@@ -26,6 +26,12 @@ type CostumeAsset = {
     data: ArrayBuffer,
 };
 
+/** One line of worker output, destined for the page's log panel. */
+type LogEntry = {
+    level: "log" | "info" | "warn" | "error" | "debug",
+    text: string,
+};
+
 type ToMainMessage =
     | { kind: "penLines", data: Float32Array, length: number }
     | { kind: "penErase" }
@@ -38,6 +44,8 @@ type ToMainMessage =
     | { kind: "targets", targets: TargetInfo[] }
     | { kind: "costumes", costumes: CostumeAsset[] }
     | { kind: "stepRate", hz: number }
+    | { kind: "progress", pct: number, label: string }
+    | { kind: "log", entries: LogEntry[] }
     | { kind: "ready" }
     | { kind: "error", message: string };
 
@@ -56,6 +64,72 @@ const workerScope = self as unknown as {
     addEventListener(type: "message", listener: (event: MessageEvent<FromMainMessage>) => void): void;
     addEventListener(type: "error", listener: (event: ErrorEvent) => void): void;
 };
+
+// Everything the worker would print goes to the page's log panel instead:
+// printing to the devtools console from a busy worker is what froze the
+// browser. Entries are batched so a chatty project cannot flood the message
+// channel either — anything past a full batch is counted and dropped.
+const MAX_LOG_BATCH = 300;
+const pendingLogs: LogEntry[] = [];
+let droppedLogs = 0;
+let logFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
+function stringifyLogArg(value: unknown): string {
+    if (typeof value === "string") return value;
+    if (value instanceof Error) return value.stack ?? String(value);
+    try {
+        const json = JSON.stringify(value);
+        return json === undefined ? String(value) : json;
+    } catch {
+        return String(value);
+    }
+}
+
+function flushLogs(): void {
+    logFlushTimer = null;
+    if (pendingLogs.length === 0 && droppedLogs === 0) return;
+
+    const entries = pendingLogs.splice(0, MAX_LOG_BATCH);
+    if (pendingLogs.length > 0) {
+        droppedLogs += pendingLogs.length;
+        pendingLogs.length = 0;
+    }
+    if (droppedLogs > 0) {
+        entries.push({ level: "warn", text: `… ${droppedLogs} messages dropped` });
+        droppedLogs = 0;
+    }
+
+    workerScope.postMessage({ kind: "log", entries });
+}
+
+function captureLog(level: LogEntry["level"], args: unknown[]): void {
+    pendingLogs.push({ level, text: args.map(stringifyLogArg).join(" ") });
+
+    if (pendingLogs.length >= MAX_LOG_BATCH) flushLogs();
+    else if (logFlushTimer === null) logFlushTimer = setTimeout(flushLogs, 100);
+}
+
+for (const level of ["log", "info", "warn", "error", "debug"] as const) {
+    console[level] = (...args: unknown[]) => captureLog(level, args);
+}
+
+/** Compile/load progress for the page's bar. Send, then let it deliver. */
+function progress(pct: number, label: string): void {
+    workerScope.postMessage({ kind: "progress", pct, label });
+}
+
+async function yieldForDelivery(): Promise<void> {
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+}
+
+/** Phase mark: every gap between marks lands in the log panel as [phase] …ms. */
+let phaseAnchor = performance.now();
+
+function phase(name: string): void {
+    const now = performance.now();
+    console.log(`[phase] ${name} ${(now - phaseAnchor).toFixed(0)}ms`);
+    phaseAnchor = now;
+}
 
 class RemoteRenderer implements ICatnipRenderer {
     public penDrawLines(data: Float32Array, length: number): void {
@@ -158,7 +232,10 @@ async function buildCostumeAssets(project: CatnipProject): Promise<CostumeAsset[
 }
 
 async function main() {
-    const moduleRequest = await fetch('catnip.wasm');
+    progress(2, "starting");
+    await yieldForDelivery();
+
+    const moduleRequest = fetch('catnip.wasm');
     // const sb3File = await (await fetch('Project.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('Variable inlining bug.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('Conway.sb3')).arrayBuffer();
@@ -167,25 +244,46 @@ async function main() {
     // const sb3File = await (await fetch('fib.sb3')).arrayBuffer();
     // The playground project: ?sb3=<file in public/> overrides the default.
     const sb3Name = new URLSearchParams(self.location.search).get("sb3") ?? "LOS.sb3";
+
+    progress(5, "fetching files");
+    await yieldForDelivery();
     const sb3File = await (await fetch(sb3Name)).arrayBuffer();
     const module = await WebAssembly.compileStreaming(moduleRequest);
+    phase("fetch + wasm compile");
 
-    const project = await run(module, sb3File, new RemoteRenderer());
+    progress(9, "loading project");
+    await yieldForDelivery();
+    const project = await run(module, sb3File, new RemoteRenderer(), (pct, label) => {
+        progress(pct, label);
+    });
+    phase("run (read project)");
+
+    progress(62, "compiling");
+    await yieldForDelivery();
     const projectModule = await project.compile({
         // enable_optimization_binaryen: false,
         enable_optimization_variable_inlining: false,
     });
+    phase("compile");
 
+    progress(85, "building render data");
+    await yieldForDelivery();
     // The page builds the drawables and skins before the first frame goes out.
     const targets = buildTargetInfo(project);
     const costumes = await buildCostumeAssets(project);
+    // The bounds pass already inflated every costume for measurement; with the
+    // page transfer done the cache only holds detached buffers now.
+    project.clearAssetCache();
     workerScope.postMessage(
         { kind: "targets", targets },
     );
     workerScope.postMessage(
         { kind: "costumes", costumes },
-        costumes.map((costume) => costume.data)
+        // With the read cache, costumes sharing one file share one buffer;
+        // a transfer list must list each buffer only once.
+        [...new Set(costumes.map((costume) => costume.data))]
     );
+    phase("costumes + targets");
 
     workerScope.addEventListener("message", (event) => {
         const message = event.data;
@@ -273,6 +371,7 @@ async function main() {
 
     setStepRate(CATNIP_DEFAULT_STEP_RATE);
 
+    progress(100, "ready");
     workerScope.postMessage({ kind: "ready" });
 }
 
@@ -281,6 +380,7 @@ workerScope.addEventListener("error", (event) => {
 });
 
 main().catch((e) => {
-    console.error(e);
+    captureLog("error", [e instanceof Error ? (e.stack ?? String(e)) : String(e)]);
+    flushLogs();
     workerScope.postMessage({ kind: "error", message: String(e && e.message ? e.message : e) });
 });

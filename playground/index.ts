@@ -13,6 +13,8 @@ type WorkerMessage =
     | { kind: "targets", targets: CatnipTargetRenderInfo[] }
     | { kind: "costumes", costumes: CatnipCostumeAsset[] }
     | { kind: "stepRate", hz: number }
+    | { kind: "progress", pct: number, label: string }
+    | { kind: "log", entries: { level: string, text: string }[] }
     | { kind: "ready" }
     | { kind: "error", message: string };
 
@@ -47,6 +49,60 @@ function scratchKeyCode(event: KeyboardEvent): number | null {
 
 async function main() {
     const renderer = new CatnipScratchRenderer();
+
+    // Everything the worker and the page would print lands in the on-page
+    // panel: printing to the devtools console is what made the demo stall.
+    const runButton = document.getElementById("run") as HTMLButtonElement | null;
+    const statusElement = document.getElementById("status");
+    const barFill = document.getElementById("bar-fill");
+    const barLabel = document.getElementById("bar-label");
+    const logElement = document.getElementById("log");
+
+    runButton?.setAttribute("disabled", "");
+
+    const MAX_LOG_LINES = 300;
+    const logLines: string[] = [];
+
+    function appendLog(lines: string[], level?: string): void {
+        if (logElement === null) return;
+
+        if (level === "warn") lines = lines.map((line) => "[warn] " + line);
+        else if (level === "error") lines = lines.map((line) => "[error] " + line);
+
+        for (const line of lines) logLines.push(line);
+        while (logLines.length > MAX_LOG_LINES) logLines.shift();
+
+        logElement.style.display = "block";
+        logElement.textContent = logLines.join("\n");
+        logElement.scrollTop = logElement.scrollHeight;
+    }
+
+    // One phase can own the worker for tens of seconds (parsing a 174 MB
+    // project.json); the tick keeps the label alive so it never looks stuck.
+    let progressState: { pct: number, label: string, done: boolean } | null = null;
+
+    function renderProgress(): void {
+        if (progressState === null) return;
+        if (statusElement !== null) statusElement.style.display = "flex";
+        if (barFill !== null) barFill.style.width = Math.max(0, Math.min(100, progressState.pct)) + "%";
+        if (barLabel !== null) {
+            const secs = ((performance.now() - progressTickAt) / 1000).toFixed(0);
+            barLabel.textContent = progressState.done
+                ? `${progressState.label} ${progressState.pct}%`
+                : `${progressState.label} ${progressState.pct}% (${secs}s)`;
+        }
+    }
+
+    let progressTickAt = performance.now();
+
+    function setProgress(pct: number, label: string, done = false): void {
+        progressTickAt = performance.now();
+        progressState = { pct, label, done };
+        renderProgress();
+    }
+
+    setInterval(() => { if (progressState !== null && !progressState.done) renderProgress(); }, 1000);
+
     // Forward the page's query string: the worker reads ?sb3= from its own
     // location.search, which a bare Worker URL would leave empty.
     const worker = new Worker("worker.js" + location.search);
@@ -59,8 +115,7 @@ async function main() {
             try {
                 renderer.frame();
             } catch (e) {
-                console.error("Error while drawing frame.");
-                console.error(e);
+                appendLog(["error while drawing a frame: " + String(e)], "error");
             }
         }
         requestAnimationFrame(draw);
@@ -157,20 +212,28 @@ async function main() {
                 drawPending = true;
                 break;
             case "stepRate":
-                console.info(`[catnip] step rate: ${message.hz}Hz`);
+                appendLog([`step rate: ${message.hz}Hz`]);
+                break;
+            case "progress":
+                setProgress(message.pct, message.label);
+                break;
+            case "log":
+                appendLog(message.entries.map((entry) =>
+                    (entry.level === "warn" ? "[warn] " : entry.level === "error" ? "[error] " : "") + entry.text));
                 break;
             case "ready":
                 attachInput();
-                console.info("[catnip] worker ready");
+                setProgress(100, "ready", true);
+                appendLog(["worker ready"]);
                 break;
             case "error":
-                console.error("[catnip worker]", message.message);
+                appendLog([message.message], "error");
                 break;
         }
     });
 
     worker.addEventListener("error", (event) => {
-        console.error("[catnip worker]", event.message);
+        appendLog([event.message], "error");
     });
 
     // The project module lives in the worker, expose a proxy for console fiddling.
