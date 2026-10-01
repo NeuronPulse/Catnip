@@ -1,6 +1,6 @@
 import { registerSB3InputBlock } from "../../sb3_ops";
 import { op_const } from "../core/const";
-import { op_get_backdrop_number_name, op_next_backdrop, op_switch_backdrop } from "./backdrop";
+import { op_get_backdrop_number_name, op_next_backdrop, op_switch_backdrop, op_switch_backdrop_and_wait } from "./backdrop";
 import { op_change_effect, op_clear_effects, op_set_effect } from "./effects";
 import { op_get_costume } from "./get_costume";
 import { op_change_layer, op_goto_frontback } from "./layers";
@@ -28,6 +28,7 @@ export default {
     looks_get_costume: op_get_costume,
     looks_next_costume: op_next_costume,
     looks_switch_backdrop: op_switch_backdrop,
+    looks_switch_backdrop_and_wait: op_switch_backdrop_and_wait,
     looks_next_backdrop: op_next_backdrop,
     looks_get_backdrop_number_name: op_get_backdrop_number_name,
     looks_show: op_show,

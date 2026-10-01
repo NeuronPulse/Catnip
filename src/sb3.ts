@@ -577,6 +577,11 @@ type SB3BlockTypeDefinition = {
             "BROADCAST_OPTION": ProjectSB3Field<string>
         }
     },
+    "event_whenbackdropswitchesto": {
+        fields: {
+            "BACKDROP": ProjectSB3Field<string>
+        }
+    },
     "event_whenkeypressed": {
         fields: {
             "KEY_OPTION": ProjectSB3Field<null>

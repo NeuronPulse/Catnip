@@ -29,6 +29,7 @@ void catnip_blockutil_list_insert_at(catnip_list *list, catnip_i32_t index, catn
 catnip_ui32_t catnip_blockutil_list_index_of(catnip_runtime *runtime, catnip_list *list, catnip_value value);
 
 void catnip_blockutil_costume_set(catnip_target *target, catnip_hstring *costume);
+void catnip_blockutil_backdrop_set(catnip_target *target, catnip_hstring *backdrop);
 
 catnip_f64_t catnip_blockutil_operator_random(catnip_runtime *runtime, catnip_value a, catnip_value b);
 

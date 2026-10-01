@@ -121,18 +121,25 @@ void catnip_looks_next_costume(catnip_target *target) {
   target->costume = (target->costume + 1) % target->sprite->costume_count;
 }
 
-void catnip_looks_backdrop_set(catnip_runtime *runtime, catnip_hstring *backdrop) {
+catnip_hstring *catnip_looks_backdrop_set(catnip_runtime *runtime, catnip_hstring *backdrop) {
   catnip_target *stage = catnip_looks_stage(runtime);
-  if (stage == 0) return;
+  if (stage == 0) return 0;
 
-  catnip_blockutil_costume_set(stage, backdrop);
+  catnip_blockutil_backdrop_set(stage, backdrop);
+
+  /* scratch-vm's _setBackdrop always reports the stage's current backdrop
+     name afterwards, even when the requested word changed nothing — that is
+     the name the when-backdrop-switches-to hats match against. */
+  return catnip_looks_backdrop_name(runtime);
 }
 
-void catnip_looks_next_backdrop(catnip_runtime *runtime) {
+catnip_hstring *catnip_looks_next_backdrop(catnip_runtime *runtime) {
   catnip_target *stage = catnip_looks_stage(runtime);
-  if (stage == 0) return;
+  if (stage == 0) return 0;
 
   catnip_looks_next_costume(stage);
+
+  return catnip_looks_backdrop_name(runtime);
 }
 
 catnip_f64_t catnip_looks_backdrop_number(catnip_runtime *runtime) {

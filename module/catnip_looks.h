@@ -44,11 +44,12 @@ void catnip_looks_clear_effects(catnip_target *target);
 void catnip_looks_next_costume(catnip_target *target);
 
 /* switch backdrop to / next backdrop: the same costume switch, applied to the
-   stage whatever script calls it. switch backdrop ... and wait runs the switch
-   immediately; the wait-for-backdrop-hats part needs event_whenbackdropswitches
-   first (not implemented yet). */
-void catnip_looks_backdrop_set(catnip_runtime *runtime, catnip_hstring *backdrop);
-void catnip_looks_next_backdrop(catnip_runtime *runtime);
+   stage whatever script calls it (the backdrop vocabulary — next/previous/
+   random backdrop — differs from the costume one). Both return the stage's
+   backdrop name after the switch: the value when-backdrop-switches-to hats
+   match against, 0 when there is no stage or no backdrop. */
+catnip_hstring *catnip_looks_backdrop_set(catnip_runtime *runtime, catnip_hstring *backdrop);
+catnip_hstring *catnip_looks_next_backdrop(catnip_runtime *runtime);
 
 /* backdrop (number|name): reads the stage's current costume. */
 catnip_f64_t catnip_looks_backdrop_number(catnip_runtime *runtime);

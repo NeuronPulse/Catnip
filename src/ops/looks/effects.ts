@@ -20,11 +20,13 @@ const EFFECT_INDEXES: Record<string, number> = {
 };
 
 // The effect dropdown is a fixed menu, so the field is always a constant
-// string; scratch3_looks.js lowercases it before the lookup too.
+// string; scratch3_looks.js lowercases it before the lookup too. An unknown
+// name still reaches RenderedTarget.setEffect, whose hasOwnProperty guard
+// turns it into a no-op — index -1 does the same in the C side.
 function effectIndex(raw: string | number | boolean): number {
     const index = EFFECT_INDEXES[String(raw).toLowerCase()];
     if (index === undefined)
-        throw new Error(`Unknown graphic effect '${raw}'`);
+        return -1;
     return index;
 }
 

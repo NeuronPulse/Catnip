@@ -335,12 +335,12 @@ void CATNIP_EXPORT(catnip_looks_next_costume)(catnip_target *target) {
   catnip_looks_next_costume(target);
 }
 
-void CATNIP_EXPORT(catnip_looks_backdrop_set)(catnip_hstring *backdrop, catnip_runtime *runtime) {
-  catnip_looks_backdrop_set(runtime, backdrop);
+catnip_hstring *CATNIP_EXPORT(catnip_looks_backdrop_set)(catnip_hstring *backdrop, catnip_runtime *runtime) {
+  return catnip_looks_backdrop_set(runtime, backdrop);
 }
 
-void CATNIP_EXPORT(catnip_looks_next_backdrop)(catnip_runtime *runtime) {
-  catnip_looks_next_backdrop(runtime);
+catnip_hstring *CATNIP_EXPORT(catnip_looks_next_backdrop)(catnip_runtime *runtime) {
+  return catnip_looks_next_backdrop(runtime);
 }
 
 catnip_f64_t CATNIP_EXPORT(catnip_looks_backdrop_number)(catnip_runtime *runtime) {

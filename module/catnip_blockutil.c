@@ -436,7 +436,30 @@ catnip_ui32_t catnip_blockutil_list_index_of(catnip_runtime *runtime, catnip_lis
   return 0;
 }
 
-void catnip_blockutil_costume_set(catnip_target *target, catnip_hstring *costume) {
+// Exact, case-sensitive compare against an ASCII literal, like scratch's
+// `requestedBackdrop === 'next backdrop'` checks (a small allocation-free
+// catnip_hstring_equal).
+static catnip_bool_t hstring_equals_ascii(const catnip_hstring *str, const char *ascii) {
+  if (str == CATNIP_NULL) return CATNIP_FALSE;
+
+  const catnip_wchar_t *data = catnip_hstring_get_data(str);
+  const catnip_ui32_t len = CATNIP_HSTRING_LENGTH(str);
+
+  catnip_ui32_t i = 0;
+  while (i < len && ascii[i] != '\0') {
+    if (data[i] != (catnip_wchar_t)(unsigned char) ascii[i]) return CATNIP_FALSE;
+    i++;
+  }
+
+  return i == len && ascii[i] == '\0';
+}
+
+/* Shared by switch costume and switch backdrop: name match first, then the
+   word list — scratch3_looks.js _setCostume/_setBackdrop's if/else chain.
+   The two chains take different words ('next costume' vs 'next backdrop'),
+   and 'random backdrop' is its own branch: with one costume it does nothing
+   at all instead of falling through to the number path. */
+static void blockutil_costume_apply(catnip_target *target, catnip_hstring *costume, catnip_bool_t is_backdrop) {
 
   for (catnip_i32_t i = 0; i < target->sprite->costume_count; i++) {
     if (catnip_hstring_equal(costume, target->sprite->costumes[i].name)) {
@@ -448,9 +471,41 @@ void catnip_blockutil_costume_set(catnip_target *target, catnip_hstring *costume
     }
   }
 
-  // No right costume :c
+  const catnip_ui32_t count = (catnip_ui32_t) target->sprite->costume_count;
 
-  // TODO Check for 'next costume' and 'previous costume'
+  if (is_backdrop) {
+    if (hstring_equals_ascii(costume, "next backdrop")) {
+      if (count > 0) target->costume = (target->costume + 1) % count;
+      return;
+    }
+
+    if (hstring_equals_ascii(costume, "previous backdrop")) {
+      if (count > 0) target->costume = (target->costume + count - 1) % count;
+      return;
+    }
+
+    if (hstring_equals_ascii(costume, "random backdrop")) {
+      // Scratch's inclusiveRandIntWithout(0, count - 1, current): uniform over
+      // every index except the current one, so the block always does something.
+      if (count > 1) {
+        catnip_i32_t pick = (catnip_i32_t) CATNIP_F64_FLOOR(
+            catnip_math_random(target->runtime) * (catnip_f64_t) (count - 1));
+        if (pick >= (catnip_i32_t) target->costume) pick++;
+        target->costume = (catnip_ui32_t) pick;
+      }
+      return;
+    }
+  } else {
+    if (hstring_equals_ascii(costume, "next costume")) {
+      if (count > 0) target->costume = (target->costume + 1) % count;
+      return;
+    }
+
+    if (hstring_equals_ascii(costume, "previous costume")) {
+      if (count > 0) target->costume = (target->costume + count - 1) % count;
+      return;
+    }
+  }
 
   catnip_f64_t cast = catnip_numconv_parse(target->runtime, costume);
 
@@ -469,6 +524,14 @@ void catnip_blockutil_costume_set(catnip_target *target, catnip_hstring *costume
   if (cast < 0) cast += target->sprite->costume_count;
 
   target->costume = (catnip_ui32_t) cast;
+}
+
+void catnip_blockutil_costume_set(catnip_target *target, catnip_hstring *costume) {
+  blockutil_costume_apply(target, costume, CATNIP_FALSE);
+}
+
+void catnip_blockutil_backdrop_set(catnip_target *target, catnip_hstring *backdrop) {
+  blockutil_costume_apply(target, backdrop, CATNIP_TRUE);
 }
 
 catnip_bool_t is_int(catnip_value value, catnip_f64_t valueNumber) {

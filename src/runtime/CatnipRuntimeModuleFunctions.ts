@@ -89,10 +89,10 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.i32], undefined),
     catnip_looks_next_costume: fn<[target: SpiderNumberType.i32]>
         ([SpiderNumberType.i32], undefined),
-    catnip_looks_backdrop_set: fn<[backdrop: SpiderNumberType.i32, runtime: SpiderNumberType.i32]>
-        ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
-    catnip_looks_next_backdrop: fn<[runtime: SpiderNumberType.i32]>
-        ([SpiderNumberType.i32], undefined),
+    catnip_looks_backdrop_set: fn<[backdrop: SpiderNumberType.i32, runtime: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_looks_next_backdrop: fn<[runtime: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_looks_backdrop_number: fn<[runtime: SpiderNumberType.i32], SpiderNumberType.f64>
         ([SpiderNumberType.i32], SpiderNumberType.f64),
     catnip_looks_backdrop_name: fn<[runtime: SpiderNumberType.i32], SpiderNumberType.i32>

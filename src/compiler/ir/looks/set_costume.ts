@@ -113,12 +113,23 @@ export const ir_set_costume = new class extends CatnipIrCommandOpType<set_costum
 
             if (costume !== null) {
                 this._emitSetCostume(ctx, ir, costume.index);
-            } else if (costumeName === "next costume") {
-                throw new Error("Not supported.");
-            } else if (costumeName === "previous costume") {
-                throw new Error("Not supported.");
+            } else if (costumeName === "next costume" || costumeName === "previous costume") {
+                // The words are costume-state dependent, so they go through
+                // the runtime function (scratch's _setCostume vocabulary).
+                ctx.emitWasmConst(SpiderNumberType.i32, ctx.runtimeModule.createCanonHString(costumeName));
+                ctx.emitWasmGetCurrentTarget();
+                ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_costume_set");
             } else if (!(isNaN(+costumeName) || Cast.isWhiteSpace(costumeName))) {
-                this._emitSetCostume(ctx, ir, Math.round(+costumeName) - 1);
+                let costumeIndex = Math.round(+costumeName) - 1;
+
+                if (!isFinite(costumeIndex)) {
+                    costumeIndex = 0;
+                }
+
+                costumeIndex %= costumeCount;
+                if (costumeIndex < 0) costumeIndex += costumeCount;
+
+                this._emitSetCostume(ctx, ir, costumeIndex);
             }
 
             return;
