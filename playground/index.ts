@@ -16,8 +16,17 @@ type WorkerMessage =
     | { kind: "progress", pct: number, label: string }
     | { kind: "log", entries: { level: string, text: string }[] }
     | { kind: "ask", question: string | null }
+    | { kind: "boot" }
     | { kind: "ready" }
     | { kind: "error", message: string };
+
+/**
+ * Embed mode (?embed=1): the scratch-gui editor iframe. The page hides the
+ * playground chrome, boots itself, and exchanges project bytes with the
+ * parent window over postMessage instead of fetching ?sb3=.
+ */
+const embedMode = new URLSearchParams(location.search).get("embed") === "1";
+if (embedMode) document.documentElement.classList.add("embed");
 
 /**
  * The Scratch key code a DOM key event is about, or null for a key Scratch
@@ -148,7 +157,12 @@ async function main() {
     }
     requestAnimationFrame(draw);
 
+    let inputAttached = false;
+
     function attachInput() {
+        if (inputAttached) return;
+        inputAttached = true;
+
         document.addEventListener("keydown", (event) => {
             if (event.target instanceof HTMLInputElement) return;
             const keyCode = scratchKeyCode(event);
@@ -207,6 +221,32 @@ async function main() {
         });
     }
 
+    /** Relays compile progress/state to the editor window (embed mode). */
+    function forwardToParent(message: object): void {
+        if (!embedMode) return;
+        window.parent.postMessage(message, "*");
+    }
+
+    // The editor owns the reload cycle: reset the scene, then hand the bytes
+    // to the worker (which compiles and auto-starts, reporting progress back
+    // through the same forwarder).
+    if (embedMode) {
+        window.addEventListener("message", (event: MessageEvent) => {
+            const data = event.data;
+            if (data === null || typeof data !== "object") return;
+
+            if (data.kind === "load" && data.buffer instanceof ArrayBuffer) {
+                renderer.reset();
+                if (askElement !== null) askElement.style.display = "none";
+                progressState = null;
+                if (statusElement !== null) statusElement.style.display = "none";
+                worker.postMessage({ kind: "load", buffer: data.buffer }, [data.buffer]);
+            } else if (data.kind === "stop") {
+                worker.postMessage({ kind: "stop" });
+            }
+        });
+    }
+
     worker.addEventListener("message", (event: MessageEvent<WorkerMessage>) => {
         const message = event.data;
         switch (message.kind) {
@@ -252,10 +292,14 @@ async function main() {
                 break;
             case "progress":
                 setProgress(message.pct, message.label);
+                forwardToParent({ kind: "progress", pct: message.pct, label: message.label });
                 break;
             case "log":
                 appendLog(message.entries.map((entry) =>
                     (entry.level === "warn" ? "[warn] " : entry.level === "error" ? "[error] " : "") + entry.text));
+                break;
+            case "boot":
+                forwardToParent({ kind: "boot" });
                 break;
             case "ask":
                 if (message.question === null) {
@@ -270,9 +314,11 @@ async function main() {
                 attachInput();
                 setProgress(100, "ready", true);
                 appendLog(["worker ready"]);
+                forwardToParent({ kind: "ready" });
                 break;
             case "error":
                 appendLog([message.message], "error");
+                forwardToParent({ kind: "error", message: message.message });
                 break;
         }
     });
@@ -290,3 +336,11 @@ async function main() {
 }
 
 (globalThis as any).main = main;
+
+// Embed has no Run button: boot as soon as the document exists (the bundle
+// itself runs from a head script, before the body is parsed).
+if (embedMode) {
+    if (document.readyState === "loading")
+        document.addEventListener("DOMContentLoaded", () => { void main(); });
+    else void main();
+}

@@ -3,6 +3,7 @@ import { run } from "../src/index";
 import { ICatnipRenderer } from "../src/runtime/ICatnipRenderer";
 import { CATNIP_DEFAULT_STEP_RATE } from "../src/runtime/CatnipRuntimeModule";
 import { CatnipProject } from "../src/runtime/CatnipProject";
+import type { CatnipProjectModule } from "../src/runtime/CatnipProjectModule";
 import { CATNIP_TARGET_FLAG_IS_STAGE } from "../src/wasm-interop/CatnipWasmStructTarget";
 
 /** Static description of one renderable target, sent once after compiling. */
@@ -47,10 +48,13 @@ type ToMainMessage =
     | { kind: "progress", pct: number, label: string }
     | { kind: "log", entries: LogEntry[] }
     | { kind: "ask", question: string | null }
+    | { kind: "boot" }
     | { kind: "ready" }
     | { kind: "error", message: string };
 
 type FromMainMessage =
+    | { kind: "load", buffer: ArrayBuffer }
+    | { kind: "stop" }
     | { kind: "key", down: boolean, keyCode: number }
     | { kind: "mouseMove", x: number, y: number }
     | { kind: "mouseDown" }
@@ -233,29 +237,103 @@ async function buildCostumeAssets(project: CatnipProject): Promise<CostumeAsset[
     return costumes;
 }
 
-async function main() {
+const searchParams = new URLSearchParams(self.location.search);
+// Embed mode (the scratch-gui editor iframe): no default fetch — the page
+// hands us project bytes over postMessage and owns the reset-before-load.
+const embedMode = searchParams.get("embed") === "1";
+
+/** The wasm module compiles once and serves every (re)load after that. */
+let wasmModulePromise: Promise<WebAssembly.Module> | null = null;
+function ensureWasm(): Promise<WebAssembly.Module> {
+    wasmModulePromise ??= WebAssembly.compileStreaming(fetch("catnip.wasm"));
+    return wasmModulePromise;
+}
+
+const remoteRenderer = new RemoteRenderer();
+
+// The active project: null while a (re)load compiles, so inputs arriving
+// in the meantime are dropped instead of hitting a stale module.
+let currentProject: CatnipProject | null = null;
+let currentModule: CatnipProjectModule | null = null;
+let intervalToken: ReturnType<typeof setInterval> | null = null;
+let stepRate = CATNIP_DEFAULT_STEP_RATE;
+
+function stopStepping(): void {
+    if (intervalToken !== null) {
+        clearInterval(intervalToken);
+        intervalToken = null;
+    }
+}
+
+function frame(): void {
+    const module = currentModule;
+    if (module === null) return;
+
+    const start = performance.now();
+    try {
+        module.step();
+        module.frame();
+    } catch (e) {
+        console.error("Error while stepping project.");
+        console.error(e);
+        stopStepping();
+        workerScope.postMessage({ kind: "error", message: String(e) });
+    }
+    recordSample(performance.now() - start);
+}
+
+// Rolling window of frame durations (step + frame) for the periodic report.
+const stepSamples: number[] = [];
+const STEP_SAMPLE_LIMIT = 600;
+let lastStatsAt = performance.now();
+
+function recordSample(ms: number): void {
+    if (stepSamples.length >= STEP_SAMPLE_LIMIT) stepSamples.shift();
+    stepSamples.push(ms);
+
+    const now = performance.now();
+    if (now - lastStatsAt < 5000) return;
+    lastStatsAt = now;
+
+    const sorted = [...stepSamples].sort((a, b) => a - b);
+    const at = (p: number) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))].toFixed(1);
+    const avg = sorted.reduce((a, b) => a + b, 0) / sorted.length;
+    console.log(`[step] rate=${currentModule?.stepRate ?? stepRate}Hz n=${sorted.length} p50=${at(0.5)}ms p95=${at(0.95)}ms max=${at(1)}ms avg=${avg.toFixed(1)}ms`);
+    try {
+        if (currentModule !== null)
+            console.log(`[gc] ${JSON.stringify(currentModule.getGcStats())}`);
+    } catch { /* gc stats unavailable */ }
+}
+
+/** Simulation steps per second. Rendering runs on rAF at its own rate. */
+function setStepRate(hz: number): void {
+    stepRate = hz;
+    if (currentModule !== null) {
+        currentModule.setStepRate(hz);
+        stopStepping();
+        intervalToken = setInterval(frame, 1000 / hz);
+    }
+    workerScope.postMessage({ kind: "stepRate", hz });
+}
+
+/**
+ * One project load: stop the running simulation, read + compile + wire the
+ * new one, then auto-start it. The page has already reset its renderer
+ * before forwarding the bytes (embed flow).
+ */
+async function loadProject(file: ArrayBuffer): Promise<void> {
+    stopStepping();
+    currentProject = null;
+    currentModule = null;
+
     progress(2, "starting");
     await yieldForDelivery();
-
-    const moduleRequest = fetch('catnip.wasm');
-    // const sb3File = await (await fetch('Project.sb3')).arrayBuffer();
-    // const sb3File = await (await fetch('Variable inlining bug.sb3')).arrayBuffer();
-    // const sb3File = await (await fetch('Conway.sb3')).arrayBuffer();
-    // const sb3File = await (await fetch('Mandlebrot Set Benchmark.sb3')).arrayBuffer();
-    // const sb3File = await (await fetch('lines.sb3')).arrayBuffer();
-    // const sb3File = await (await fetch('fib.sb3')).arrayBuffer();
-    // The playground project: ?sb3=<file in public/> overrides the default.
-    const sb3Name = new URLSearchParams(self.location.search).get("sb3") ?? "LOS.sb3";
-
-    progress(5, "fetching files");
-    await yieldForDelivery();
-    const sb3File = await (await fetch(sb3Name)).arrayBuffer();
-    const module = await WebAssembly.compileStreaming(moduleRequest);
-    phase("fetch + wasm compile");
+    const wasmModule = await ensureWasm();
+    phase("wasm");
 
     progress(9, "loading project");
     await yieldForDelivery();
-    const project = await run(module, sb3File, new RemoteRenderer(), (pct, label) => {
+    const project = await run(wasmModule, file, remoteRenderer, (pct, label) => {
         progress(pct, label);
     });
     phase("run (read project)");
@@ -295,99 +373,100 @@ async function main() {
     );
     phase("costumes + targets");
 
-    workerScope.addEventListener("message", (event) => {
-        const message = event.data;
-        switch (message.kind) {
-            case "key":
-                projectModule.triggerEvent(message.down ? "IO_KEY_PRESSED" : "IO_KEY_RELEASED", message.keyCode);
-                break;
-            case "mouseMove":
-                projectModule.mouseMove(message.x, message.y);
-                break;
-            case "mouseDown":
-                projectModule.triggerEvent("IO_MOUSE_DOWN");
-                break;
-            case "mouseUp":
-                projectModule.mouseUp();
-                break;
-            case "click": {
-                // The pick is an index in draw-state slot order — the
-                // originals in project order, then any live clone. Whether
-                // it clicks now or starts a drag is the module's call
-                // (scratch's mouse.js click rules).
-                projectModule.mousePick(message.targetIndex);
-                break;
-            }
-            case "stepRate":
-                setStepRate(message.hz);
-                break;
-            case "answer": {
-                const functions = project.runtimeModule.functions;
-                functions.catnip_sensing_answer_set(
-                    project.runtimeModule.createCanonHString(message.text));
-                break;
-            }
-            case "event":
-                projectModule.triggerEvent(message.id as any, ...message.args);
-                break;
-        }
-    });
-
+    currentProject = project;
+    currentModule = projectModule;
     (self as any).project = projectModule;
 
-    let intervalToken: any;
-
-    // The simulation steps on its own timer; the main thread renders on rAF and
-    // only redraws when the worker reports a new frame.
-    function setStepRate(hz: number) {
-        projectModule.setStepRate(hz);
-        if (intervalToken !== undefined) clearInterval(intervalToken);
-        intervalToken = setInterval(frame, 1000 / hz);
-        workerScope.postMessage({ kind: "stepRate", hz });
-    }
-
-    // Rolling window of frame durations (step + frame) for the periodic report.
-    const stepSamples: number[] = [];
-    const STEP_SAMPLE_LIMIT = 600;
-    let lastStatsAt = performance.now();
-
-    function recordSample(ms: number) {
-        if (stepSamples.length >= STEP_SAMPLE_LIMIT) stepSamples.shift();
-        stepSamples.push(ms);
-
-        const now = performance.now();
-        if (now - lastStatsAt < 5000) return;
-        lastStatsAt = now;
-
-        const sorted = [...stepSamples].sort((a, b) => a - b);
-        const at = (p: number) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))].toFixed(1);
-        const avg = sorted.reduce((a, b) => a + b, 0) / sorted.length;
-        console.log(`[step] rate=${projectModule.stepRate}Hz n=${sorted.length} p50=${at(0.5)}ms p95=${at(0.95)}ms max=${at(1)}ms avg=${avg.toFixed(1)}ms`);
-        try {
-            console.log(`[gc] ${JSON.stringify(projectModule.getGcStats())}`);
-        } catch { /* gc stats unavailable */ }
-    }
-
-    function frame() {
-        const start = performance.now();
-        try {
-            projectModule.step();
-            projectModule.frame();
-        } catch (e) {
-            console.error("Error while stepping project.");
-            console.error(e);
-            clearInterval(intervalToken);
-            workerScope.postMessage({ kind: "error", message: String(e) });
-        }
-        recordSample(performance.now() - start);
-    }
-
     projectModule.start();
-
-    setStepRate(CATNIP_DEFAULT_STEP_RATE);
+    setStepRate(stepRate);
 
     progress(100, "ready");
     workerScope.postMessage({ kind: "ready" });
+}
+
+/** Loads serialize: a second green flag queues behind the first compile. */
+let loadChain: Promise<void> = Promise.resolve();
+
+function enqueueLoad(file: ArrayBuffer): void {
+    loadChain = loadChain.then(() => loadProject(file)).catch((e) => {
+        const message = String(e && e.message ? e.message : e);
+        captureLog("error", [e instanceof Error ? (e.stack ?? String(e)) : String(e)]);
+        flushLogs();
+        workerScope.postMessage({ kind: "error", message });
+    });
+}
+
+workerScope.addEventListener("message", (event) => {
+    const message = event.data;
+    switch (message.kind) {
+        case "load":
+            enqueueLoad(message.buffer);
+            break;
+        case "stop":
+            stopStepping();
+            break;
+        case "key":
+            currentModule?.triggerEvent(message.down ? "IO_KEY_PRESSED" : "IO_KEY_RELEASED", message.keyCode);
+            break;
+        case "mouseMove":
+            currentModule?.mouseMove(message.x, message.y);
+            break;
+        case "mouseDown":
+            currentModule?.triggerEvent("IO_MOUSE_DOWN");
+            break;
+        case "mouseUp":
+            currentModule?.mouseUp();
+            break;
+        case "click":
+            // The pick is an index in draw-state slot order — the originals
+            // in project order, then any live clone. Whether it clicks now
+            // or starts a drag is the module's call (scratch's mouse.js).
+            currentModule?.mousePick(message.targetIndex);
+            break;
+        case "stepRate":
+            setStepRate(message.hz);
+            break;
+        case "answer": {
+            const project = currentProject;
+            if (project !== null) {
+                project.runtimeModule.functions.catnip_sensing_answer_set(
+                    project.runtimeModule.createCanonHString(message.text));
+            }
+            break;
+        }
+        case "event":
+            currentModule?.triggerEvent(message.id as any, ...message.args);
+            break;
+    }
+});
+
+// Tells the page the listener is up: everything it forwards from here on is
+// delivered (a message posted before this would race the listener setup).
+workerScope.postMessage({ kind: "boot" });
+
+async function main() {
+    if (embedMode) {
+        // The editor iframe waits for {kind: "load"} from the page.
+        return;
+    }
+
+    progress(2, "starting");
+    await yieldForDelivery();
+
+    // const sb3File = await (await fetch('Project.sb3')).arrayBuffer();
+    // const sb3File = await (await fetch('Variable inlining bug.sb3')).arrayBuffer();
+    // const sb3File = await (await fetch('Conway.sb3')).arrayBuffer();
+    // const sb3File = await (await fetch('Mandlebrot Set Benchmark.sb3')).arrayBuffer();
+    // const sb3File = await (await fetch('lines.sb3')).arrayBuffer();
+    // const sb3File = await (await fetch('fib.sb3')).arrayBuffer();
+    // The playground project: ?sb3=<file in public/> overrides the default.
+    const sb3Name = searchParams.get("sb3") ?? "LOS.sb3";
+
+    progress(5, "fetching files");
+    await yieldForDelivery();
+    const sb3File = await (await fetch(sb3Name)).arrayBuffer();
+
+    enqueueLoad(sb3File);
 }
 
 workerScope.addEventListener("error", (event) => {

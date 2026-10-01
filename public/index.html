@@ -62,6 +62,35 @@
         #ask-ok {
             font: 11px monospace;
         }
+        /* Embed mode (?embed=1): the editor iframe wants only the stage —
+           480x360 canvas at the top-left, ask prompt as an overlay. */
+        html.embed, html.embed body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #fff;
+        }
+        html.embed #run,
+        html.embed #status,
+        html.embed #log {
+            display: none !important;
+        }
+        html.embed #canvas {
+            width: 480px;
+            height: 360px;
+            display: block;
+        }
+        html.embed #ask {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 42%;
+            justify-content: center;
+            z-index: 20;
+            margin: 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.95);
+        }
     </style>
 </head>
 <body>

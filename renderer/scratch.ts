@@ -53,6 +53,8 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
     private readonly _renderer: RenderWebGL;
 
     private _drawables: (number | undefined)[] = [];
+    /** Layer group per drawable index — destroyDrawable needs it back. */
+    private _drawableGroups: string[] = [];
     private _skins: Map<string, number> = new Map();
     private _appliedSkins: (number | undefined)[] = [];
     /** Sprite index per draw-state slot: clones share their sprite's skins. */
@@ -61,6 +63,9 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
 
     private _penDrawableID: number | null = null;
     private _penSkinID: number | null = null;
+
+    /** Bumped by reset(): async bitmap decodes from the old project drop out. */
+    private _generation: number = 0;
 
     /** Current say/think bubble per target index, as the worker sent it. */
     private _bubbles: Map<number, { type: number, text: string }> = new Map();
@@ -91,6 +96,7 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
         for (const info of ordered) {
             const group = info.isStage ? "background" : "sprite";
             this._drawables[info.index] = this._renderer.createDrawable(group);
+            this._drawableGroups[info.index] = group;
             this._skinTargetIndex[info.index] = info.index;
             if (info.isStage) this._stageIndex = info.index;
         }
@@ -99,6 +105,7 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
     /** A clone took a draw-state slot: give it a drawable of its sprite's group. */
     public cloneAdd(slot: number, spriteIndex: number): void {
         this._drawables[slot] = this._renderer.createDrawable("sprite");
+        this._drawableGroups[slot] = "sprite";
         this._skinTargetIndex[slot] = spriteIndex;
         // The slot may be recycled from an earlier clone; its skin must be
         // re-applied to the fresh drawable.
@@ -155,6 +162,7 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
 
         const url = URL.createObjectURL(new Blob([costume.data], { type: "image/png" }));
         const image = new Image();
+        const generation = this._generation;
 
         image.onload = () => {
             URL.revokeObjectURL(url);
@@ -171,6 +179,13 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
                 costume.rotationCenterX / resolution,
                 costume.rotationCenterY / resolution,
             ]);
+
+            // reset() happened while the image decoded: the next project owns
+            // the skin map now, drop this one instead of resurrecting it.
+            if (generation !== this._generation) {
+                this._renderer.destroySkin(skinID);
+                return;
+            }
             this._skins.set(key, skinID);
         };
 
@@ -394,5 +409,44 @@ export class CatnipScratchRenderer implements ICatnipRenderer {
     /** Draws one frame; the page calls this from its rAF loop when dirty. */
     public frame(): void {
         this._renderer.draw();
+    }
+
+    /**
+     * Drops everything belonging to the loaded project — drawables, skins,
+     * pen layer, bubbles — so the next `targets`/`costumes` pair builds a
+     * clean scene. The embed page calls this before forwarding a reload.
+     */
+    public reset(): void {
+        this._generation++;
+
+        for (let i = 0; i < this._drawables.length; i++) {
+            const drawable = this._drawables[i];
+            if (drawable !== undefined)
+                this._renderer.destroyDrawable(drawable, this._drawableGroups[i] ?? "sprite");
+        }
+        this._drawables = [];
+        this._drawableGroups = [];
+        this._appliedSkins = [];
+        this._skinTargetIndex = [];
+        this._drawX = [];
+        this._drawY = [];
+        this._drawVisible = [];
+        this._stageIndex = 0;
+
+        for (const skinID of this._skins.values()) this._renderer.destroySkin(skinID);
+        this._skins.clear();
+
+        if (this._penDrawableID !== null) {
+            this._renderer.destroyDrawable(this._penDrawableID, "pen");
+            this._penDrawableID = null;
+        }
+        if (this._penSkinID !== null) {
+            this._renderer.destroySkin(this._penSkinID);
+            this._penSkinID = null;
+        }
+
+        this._bubbles.clear();
+        for (const el of this._bubbleEls.values()) el.remove();
+        this._bubbleEls.clear();
     }
 }

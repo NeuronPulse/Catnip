@@ -42,6 +42,7 @@ declare module "scratch-render" {
             rotationCenter?: [number, number]
         ): number;
         createPenSkin(): number;
+        destroySkin(skinID: number): void;
         getSkinSize(skinID: number): [number, number];
         getSkinRotationCenter(skinID: number): [number, number];
 
