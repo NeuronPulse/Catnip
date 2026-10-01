@@ -234,6 +234,10 @@ async function main() {
                 // Force variable inlining for tests, to thoughly test it
                 enable_optimization_variable_inlining_force: true,                
             });
+            // Decode every costume silhouette for the sensing touch queries.
+            // Always on in the harness: it covers the PNG path on every test
+            // and the decode is deterministic (node has no SVG rasterizer).
+            await projectModule.touch.warmup();
 
             // The show hook runs inside the project's step; the harness only
             // records the question there and answers after step() returns, so

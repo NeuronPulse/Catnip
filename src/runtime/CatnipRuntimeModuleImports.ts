@@ -13,6 +13,9 @@ export interface CatnipRuntimeModuleImports {
         catnip_import_perf_time: () => number,
         catnip_import_ask_show: (strPtr: number, strLength: number) => void;
         catnip_import_ask_hide: () => void;
+        catnip_import_touching: (selfPtr: number, optionPtr: number, optionLength: number) => number;
+        catnip_import_touching_color: (selfPtr: number, colorPtr: number, colorLength: number) => number;
+        catnip_import_color_touching_color: (selfPtr: number, colorPtr: number, colorLength: number, maskPtr: number, maskLength: number) => number;
     },
 
     env: {

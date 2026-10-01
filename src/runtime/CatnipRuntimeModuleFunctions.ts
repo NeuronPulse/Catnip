@@ -140,6 +140,12 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.f64),
     catnip_sensing_set_drag_mode: fn<[mode: SpiderNumberType.f64, target: SpiderNumberType.i32]>
         ([SpiderNumberType.f64, SpiderNumberType.i32], undefined),
+    catnip_sensing_touching: fn<[option: SpiderNumberType.i32, target: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_sensing_touching_color: fn<[color: SpiderNumberType.i32, target: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_sensing_color_touching_color: fn<[color: SpiderNumberType.i32, mask: SpiderNumberType.i32, target: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
 
     catnip_thread_new: fn<[target: SpiderNumberType.i32, fnprt: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),

@@ -18,6 +18,7 @@
     "binaryen": "^123.0.0",
     "jest": "^29.7.0",
     "jszip": "^3.10.1",
+    "pako": "^1.0.11",
     "rollup": "^3.9.0",
     "scratch-render": "^2.2.84",
     "ts-jest": "^29.1.5",
@@ -28,6 +29,7 @@
     "wasm-spider": "^1.1.1"
   },
   "devDependencies": {
+    "@types/pako": "^2.0.4",
     "concurrently": "^8.2.2",
     "rollup-plugin-livereload": "^2.0.5",
     "rollup-plugin-tla": "^0.0.2",

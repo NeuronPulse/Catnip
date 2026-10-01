@@ -9,6 +9,7 @@ import { CatnipBubbleUpdate, DRAW_STATE, DRAW_STATE_STRIDE } from "./ICatnipRend
 import { CatnipWasmStructHeapString } from "../wasm-interop/CatnipWasmStructHeapString";
 import UTF16 from "../utf16";
 import { CATNIP_TARGET_FLAG_IS_DRAGGABLE, CATNIP_TARGET_FLAG_IS_VISIBLE, CatnipWasmStructTarget } from "../wasm-interop/CatnipWasmStructTarget";
+import { CatnipTouchQueries } from "../touch/CatnipTouchQueries";
 
 export type CatnipProjectModuleEvent<TEvnetID extends CatnipEventID = CatnipEventID> = { id: TEvnetID, exportName: string };
 
@@ -40,6 +41,16 @@ export class CatnipProjectModule {
     private _dragTarget: number = 0;
     private _dragMoved: boolean = false;
 
+    // The sensing mouse position: scratch's io/mouse keeps the last posted
+    // scratch coordinates, NaN until the first mouse move (the `_mouse_`
+    // pixel query then never matches — same as scratch's uninitialized
+    // _scratchX/_scratchY going through clientSpaceToScratchBounds).
+    private _mouseX: number = NaN;
+    private _mouseY: number = NaN;
+
+    /** The sensing touch queries (touching / touching color). */
+    public readonly touch: CatnipTouchQueries;
+
     /** @internal */
     constructor(project: CatnipProject, instance: WebAssembly.Instance, events: CatnipProjectModuleEvent[]) {
         this.project = project;
@@ -69,6 +80,58 @@ export class CatnipProjectModule {
             this._slotByPtr.set(wrapper.ptr, slot);
             this._spriteIndexBySpritePtr.set(sprite.structWrapper.ptr, slot);
         }
+
+        this.touch = new CatnipTouchQueries(this);
+        // The touch imports run against the runtime module, which points at
+        // the active project module's queries (the import bodies check for
+        // null so a runtime compiled without a module still instantiates).
+        this.runtimeModule.touch = this.touch;
+    }
+
+    /**
+     * Reconcile the touch query slot view with the live target chain. Safe
+     * to call any number of times (it is the serialization-time sync): a
+     * query entry calls it once so clones created since the last frame are
+     * candidates and deleted ones are gone.
+     */
+    public syncTouchSlots(): void {
+        this._syncSlots();
+    }
+
+    /** Number of draw-state slots (originals + live clones; holes included). */
+    public get slotCount(): number {
+        return this._slots.length;
+    }
+
+    /** The target wrapper in a slot, or null for a hole. */
+    public getSlot(index: number): WasmStructWrapper<typeof CatnipWasmStructTarget> | null {
+        return this._slots[index] ?? null;
+    }
+
+    /** The sprite index a slot belongs to (project.json order for the
+     *  originals, -1 for an unmapped hole). */
+    public getSlotSpriteIndex(index: number): number {
+        return this._slotSpriteIndex[index] ?? -1;
+    }
+
+    /** The slot a live target pointer maps to, or -1. */
+    public findSlotByPtr(ptr: number): number {
+        return this._slotByPtr.get(ptr) ?? -1;
+    }
+
+    /** The target currently being mouse-dragged, or 0. */
+    public get dragTargetPtr(): number {
+        return this._dragTarget;
+    }
+
+    /** The last mouse position in scratch coordinates (NaN before the first
+     *  move — the `_mouse_` touch query then reads as off-stage). */
+    public get mouseX(): number {
+        return this._mouseX;
+    }
+
+    public get mouseY(): number {
+        return this._mouseY;
     }
 
     /**
@@ -167,8 +230,12 @@ export class CatnipProjectModule {
         }
     }
 
-    /** Mouse move: the sensing position, plus dragging a held target. */
+    /** Mouse move: the sensing position, plus dragging a held target.
+     *  Only here updates the `_mouse_` query coordinates (the page posts
+     *  moves; pick/up never rewrite them, matching scratch's posts). */
     public mouseMove(x: number, y: number): void {
+        this._mouseX = x;
+        this._mouseY = y;
         this.triggerEvent("IO_MOUSE_MOVE", x, y);
 
         if (this._dragTarget !== 0) {

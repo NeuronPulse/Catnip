@@ -278,6 +278,9 @@ async function main() {
     // The page builds the drawables and skins before the first frame goes out.
     const targets = buildTargetInfo(project);
     const costumes = await buildCostumeAssets(project);
+    // Decode the touch-query silhouettes while the zip is still readable —
+    // after clearAssetCache the sensing queries would have nothing to read.
+    await projectModule.touch.warmup();
     // The bounds pass already inflated every costume for measurement; with the
     // page transfer done the cache only holds detached buffers now.
     project.clearAssetCache();

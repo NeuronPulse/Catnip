@@ -11,6 +11,7 @@ import { CatnipRuntimeModuleFunctions, CatnipRuntimeModuleFunctionsObject } from
 import { ICatnipRenderer, PEN_ATTRIBUTE_STRIDE_BYTES } from "./ICatnipRenderer";
 import UTF16 from "../utf16";
 import { CatnipCompilerLogger } from "../compiler/CatnipCompilerLogger";
+import { CatnipTouchQueries } from "../touch/CatnipTouchQueries";
 
 /*
  * A wrapper for the catnip wasm runtime
@@ -61,6 +62,19 @@ export class CatnipRuntimeModule {
                 catnip_import_ask_hide: () => {
                     runtimeModule.onAskQuestion?.(null);
                 },
+                catnip_import_touching: (selfPtr: number, optionPtr: number, optionLength: number) => {
+                    const option = runtimeModule.decodeUtf16(optionPtr, optionLength);
+                    return runtimeModule.touch !== null && runtimeModule.touch.isTouchingObject(selfPtr, option) ? 1 : 0;
+                },
+                catnip_import_touching_color: (selfPtr: number, colorPtr: number, colorLength: number) => {
+                    const color = runtimeModule.decodeUtf16(colorPtr, colorLength);
+                    return runtimeModule.touch !== null && runtimeModule.touch.isTouchingColor(selfPtr, color) ? 1 : 0;
+                },
+                catnip_import_color_touching_color: (selfPtr: number, colorPtr: number, colorLength: number, maskPtr: number, maskLength: number) => {
+                    const color = runtimeModule.decodeUtf16(colorPtr, colorLength);
+                    const mask = runtimeModule.decodeUtf16(maskPtr, maskLength);
+                    return runtimeModule.touch !== null && runtimeModule.touch.isColorTouchingColor(selfPtr, color, mask) ? 1 : 0;
+                },
             },
 
             env: {
@@ -94,6 +108,20 @@ export class CatnipRuntimeModule {
      * away. The host answers with the catnip_sensing_answer_set export.
      */
     public onAskQuestion: ((question: string | null) => void) | null = null;
+
+    /**
+     * The sensing touch queries (touching / touchingcolor / coloristouching
+     * color): CPU silhouette queries over the costume pixels. Wired up by the
+     * CatnipProjectModule that owns the target list; null before then (and in
+     * hosts without pixel data), where every query answers false.
+     */
+    public touch: CatnipTouchQueries | null = null;
+
+    /** Decodes `length` UTF-16 code units at `ptr` from wasm memory. */
+    public decodeUtf16(ptr: number, length: number): string {
+        if (length === 0) return "";
+        return UTF16.decode(this.memory.buffer.slice(ptr, ptr + (length * 2)));
+    }
 
     private _memory: DataView | null;
     public get memory(): DataView {

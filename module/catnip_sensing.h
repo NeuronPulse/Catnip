@@ -30,4 +30,11 @@ catnip_f64_t catnip_sensing_of(const catnip_hstring *object, const catnip_hstrin
 /* sensing set drag mode: 1.0 = draggable, 0.0 = not draggable. */
 void catnip_sensing_set_drag_mode(catnip_f64_t mode, catnip_target *self);
 
+/* sensing touching / touchingcolor / coloristouchingcolor. All three are
+   host queries (pixel silhouettes live on the JS side); the option string is
+   "_mouse_", "_edge_" or a sprite name, colors are Scratch color literals. */
+catnip_bool_t catnip_sensing_touching(const catnip_hstring *option, catnip_target *self);
+catnip_bool_t catnip_sensing_touching_color(const catnip_hstring *color, catnip_target *self);
+catnip_bool_t catnip_sensing_color_touching_color(const catnip_hstring *color, const catnip_hstring *mask, catnip_target *self);
+
 #endif

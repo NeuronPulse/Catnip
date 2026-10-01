@@ -430,3 +430,15 @@ catnip_f64_t CATNIP_EXPORT(catnip_sensing_of)(const catnip_hstring *object, cons
 void CATNIP_EXPORT(catnip_sensing_set_drag_mode)(catnip_f64_t mode, catnip_target *self) {
   catnip_sensing_set_drag_mode(mode, self);
 }
+
+catnip_bool_t CATNIP_EXPORT(catnip_sensing_touching)(const catnip_hstring *option, catnip_target *self) {
+  return catnip_sensing_touching(option, self);
+}
+
+catnip_bool_t CATNIP_EXPORT(catnip_sensing_touching_color)(const catnip_hstring *color, catnip_target *self) {
+  return catnip_sensing_touching_color(color, self);
+}
+
+catnip_bool_t CATNIP_EXPORT(catnip_sensing_color_touching_color)(const catnip_hstring *color, const catnip_hstring *mask, catnip_target *self) {
+  return catnip_sensing_color_touching_color(color, mask, self);
+}

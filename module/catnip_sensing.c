@@ -256,3 +256,28 @@ void catnip_sensing_set_drag_mode(catnip_f64_t mode, catnip_target *self) {
   else
     self->flags &= ~((catnip_ui32_t)CATNIP_TARGET_FLAG_IS_DRAGGABLE);
 }
+
+/* touching / touchingcolor / coloristouchingcolor ------------------------ */
+
+/* Pure forwarders: Scratch's three pixel queries all end in the renderer's
+   CPU silhouettes, which live on the host side (bytecode wasm cannot decode
+   costume pixels). The host dispatches "_mouse_" / "_edge_" / sprite name
+   itself, exactly like scratch-vm's RenderedTarget.isTouchingObject. */
+
+catnip_bool_t catnip_sensing_touching(const catnip_hstring *option, catnip_target *self) {
+  return catnip_import_touching(self, catnip_hstring_get_data(option),
+                                CATNIP_HSTRING_LENGTH(option));
+}
+
+catnip_bool_t catnip_sensing_touching_color(const catnip_hstring *color, catnip_target *self) {
+  return catnip_import_touching_color(self, catnip_hstring_get_data(color),
+                                      CATNIP_HSTRING_LENGTH(color));
+}
+
+catnip_bool_t catnip_sensing_color_touching_color(const catnip_hstring *color, const catnip_hstring *mask, catnip_target *self) {
+  return catnip_import_color_touching_color(self,
+                                            catnip_hstring_get_data(color),
+                                            CATNIP_HSTRING_LENGTH(color),
+                                            catnip_hstring_get_data(mask),
+                                            CATNIP_HSTRING_LENGTH(mask));
+}
