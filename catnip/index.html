@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <!-- The page bundle never touches jszip (only the worker unzips .sb3),
+         so no CDN script: the demo loads offline. -->
+    <script src="bundle.js"></script>
+    <style>
+        /* scratch-render's resize() grows the canvas backing store with the
+           device pixel ratio; pin the laid-out size so that stays invisible. */
+        #canvas {
+            width: 960px;
+            height: 720px;
+        }
+        #status {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin: 6px 0;
+            font: 11px monospace;
+            color: #333;
+        }
+        #bar {
+            width: 240px;
+            height: 6px;
+            border: 1px solid #999;
+            background: #fff;
+        }
+        #bar-fill {
+            width: 0%;
+            height: 100%;
+            background: #333;
+        }
+        #log {
+            display: none;
+            font: 11px monospace;
+            color: #222;
+            background: #fff;
+            border: 1px solid #ccc;
+            margin: 6px 0;
+            padding: 4px;
+            max-height: 140px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        #ask {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin: 6px 0;
+            font: 11px monospace;
+            color: #333;
+        }
+        #ask-input {
+            font: 11px monospace;
+            border: 1px solid #999;
+            padding: 1px 3px;
+            width: 240px;
+        }
+        #ask-ok {
+            font: 11px monospace;
+        }
+        /* Embed mode (?embed=1): the editor iframe wants only the stage —
+           480x360 canvas at the top-left, ask prompt as an overlay. */
+        html.embed, html.embed body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #fff;
+        }
+        html.embed #run,
+        html.embed #status,
+        html.embed #log {
+            display: none !important;
+        }
+        html.embed #canvas {
+            width: 480px;
+            height: 360px;
+            display: block;
+        }
+        html.embed #ask {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 42%;
+            justify-content: center;
+            z-index: 20;
+            margin: 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.95);
+        }
+    </style>
+</head>
+<body>
+    <button id="run" onclick="main()">Run!</button>
+    <div id="status"><div id="bar"><div id="bar-fill"></div></div><span id="bar-label"></span></div>
+    <canvas id="canvas" width=960 height=720></canvas>
+    <div id="ask"><span id="ask-text"></span><input id="ask-input" type="text"><button id="ask-ok">OK</button></div>
+    <div id="log"></div>
+</body>
+</html>
