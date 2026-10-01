@@ -66,6 +66,10 @@ void CATNIP_EXPORT(catnip_target_set_xy)(catnip_f64_t x, catnip_f64_t y, catnip_
   catnip_target_set_xy(target, x, y);
 }
 
+void CATNIP_EXPORT(catnip_target_set_xy_force)(catnip_f64_t x, catnip_f64_t y, catnip_target *target) {
+  catnip_target_set_xy_force(target, x, y);
+}
+
 
 catnip_thread *CATNIP_EXPORT(catnip_thread_new)(catnip_target *target, catnip_thread_fnptr fnptr) {
   return catnip_thread_new(target, fnptr);
@@ -283,16 +287,20 @@ void CATNIP_EXPORT(catnip_motion_set_rotation_style)(catnip_hstring *style, catn
   catnip_motion_set_rotation_style(target, style);
 }
 
-void CATNIP_EXPORT(catnip_motion_glide_begin_xy)(catnip_f64_t x, catnip_f64_t y, catnip_f64_t secs, catnip_target *target) {
-  catnip_motion_glide_begin_xy(target, x, y, secs);
+void CATNIP_EXPORT(catnip_motion_glide_begin_xy)(catnip_f64_t x, catnip_f64_t y, catnip_f64_t secs, catnip_thread *thread) {
+  catnip_motion_glide_begin_xy(thread, x, y, secs);
 }
 
-void CATNIP_EXPORT(catnip_motion_glide_begin_to)(catnip_hstring *to, catnip_f64_t secs, catnip_target *target) {
-  catnip_motion_glide_begin_to(target, to, secs);
+void CATNIP_EXPORT(catnip_motion_glide_begin_to)(catnip_hstring *to, catnip_f64_t secs, catnip_thread *thread) {
+  catnip_motion_glide_begin_to(thread, to, secs);
 }
 
-catnip_f64_t CATNIP_EXPORT(catnip_motion_glide_step)(catnip_target *target) {
-  return catnip_motion_glide_step(target);
+catnip_f64_t CATNIP_EXPORT(catnip_motion_glide_step)(catnip_thread *thread) {
+  return catnip_motion_glide_step(thread);
+}
+
+catnip_f64_t CATNIP_EXPORT(catnip_motion_limit_precision)(catnip_f64_t coordinate) {
+  return catnip_motion_limit_precision(coordinate);
 }
 
 void CATNIP_EXPORT(catnip_looks_set_visible)(catnip_bool_t visible, catnip_target *target) {

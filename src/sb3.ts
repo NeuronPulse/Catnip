@@ -427,6 +427,23 @@ type SB3BlockTypeDefinition = {
             "STYLE": ProjectSB3Input,
         }
     },
+    "motion_scroll_right": {
+        inputs: {
+            "DISTANCE": ProjectSB3Input,
+        }
+    },
+    "motion_scroll_up": {
+        inputs: {
+            "DISTANCE": ProjectSB3Input,
+        }
+    },
+    "motion_align_scene": {
+        fields: {
+            "ALIGNMENT": ProjectSB3Field<null>
+        }
+    },
+    "motion_xscroll": {},
+    "motion_yscroll": {},
 
     "looks_say": {
         inputs: {

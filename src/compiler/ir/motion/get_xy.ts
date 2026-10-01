@@ -7,7 +7,7 @@ import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { SpiderOpcodes } from "wasm-spider";
 import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTarget";
 
-export type get_xy_ir_inputs = { axis: "x" | "y" };
+export type get_xy_ir_inputs = { axis: "x" | "y", limitPrecision: boolean };
 
 export const ir_get_xy = new class extends CatnipIrInputOpType<get_xy_ir_inputs> {
     public constructor() { super("motion_get_xy"); }
@@ -31,5 +31,9 @@ export const ir_get_xy = new class extends CatnipIrInputOpType<get_xy_ir_inputs>
         }
         
         ctx.emitWasm(SpiderOpcodes.f64_load, 3, offset);
+
+        if (ir.inputs.limitPrecision)
+            ctx.emitWasmRuntimeFunctionCall("catnip_motion_limit_precision");
+
     }
 }

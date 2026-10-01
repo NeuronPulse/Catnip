@@ -17,8 +17,8 @@ export const op_change_y = new class extends CatnipCommandOpType<change_y_inputs
     }
     
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: change_y_inputs): void {
-        ctx.emitIr(ir_get_xy, { axis: "x" }, {});
-        ctx.emitIr(ir_get_xy, { axis: "y" }, {});
+        ctx.emitIr(ir_get_xy, { axis: "x", limitPrecision: false }, {});
+        ctx.emitIr(ir_get_xy, { axis: "y", limitPrecision: false }, {});
         ctx.emitInput(inputs.y, CatnipValueFormat.F64_NUMBER);
         ctx.emitIr(ir_add, {}, {});
         ctx.emitIr(ir_set_xy, { }, {});

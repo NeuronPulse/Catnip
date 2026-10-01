@@ -8,7 +8,7 @@ import { CatnipRuntimeGcStats, CatnipWasmStructRuntimeGcStats } from '../wasm-in
 import { CatnipBubbleUpdate, DRAW_STATE, DRAW_STATE_STRIDE } from "./ICatnipRenderer";
 import { CatnipWasmStructHeapString } from "../wasm-interop/CatnipWasmStructHeapString";
 import UTF16 from "../utf16";
-import { CATNIP_TARGET_FLAG_IS_DRAGGABLE, CATNIP_TARGET_FLAG_IS_VISIBLE, CatnipWasmStructTarget } from "../wasm-interop/CatnipWasmStructTarget";
+import { CATNIP_TARGET_FLAG_IS_DRAGGING, CATNIP_TARGET_FLAG_IS_DRAGGABLE, CATNIP_TARGET_FLAG_IS_VISIBLE, CatnipWasmStructTarget } from "../wasm-interop/CatnipWasmStructTarget";
 import { CatnipTouchQueries } from "../touch/CatnipTouchQueries";
 
 export type CatnipProjectModuleEvent<TEvnetID extends CatnipEventID = CatnipEventID> = { id: TEvnetID, exportName: string };
@@ -220,14 +220,28 @@ export class CatnipProjectModule {
         const ptr = this.getTargetPointer(index);
         if (ptr === 0) return;
 
+        // A stale drag (missed mouseup) would keep blocking setXY forever.
+        if (this._dragTarget !== 0 && this._dragTarget !== ptr)
+            this._setDragging(this._dragTarget, false);
+
         const flags = this.runtimeModule.memory.getUint32(
             ptr + CatnipWasmStructTarget.getMemberOffset("flags"), true);
         if ((flags & CATNIP_TARGET_FLAG_IS_DRAGGABLE) !== 0) {
             this._dragTarget = ptr;
             this._dragMoved = false;
+            this._setDragging(ptr, true);
         } else {
             this.triggerEvent("IO_CLICK_TARGET", ptr);
         }
+    }
+
+    private _setDragging(ptr: number, dragging: boolean): void {
+        const offset = ptr + CatnipWasmStructTarget.getMemberOffset("flags");
+        const flags = this.runtimeModule.memory.getUint32(offset, true);
+        const updated = dragging
+            ? (flags | CATNIP_TARGET_FLAG_IS_DRAGGING)
+            : (flags & ~CATNIP_TARGET_FLAG_IS_DRAGGING);
+        this.runtimeModule.memory.setUint32(offset, updated, true);
     }
 
     /** Mouse move: the sensing position, plus dragging a held target.
@@ -240,7 +254,7 @@ export class CatnipProjectModule {
 
         if (this._dragTarget !== 0) {
             this._dragMoved = true;
-            this.runtimeModule.functions.catnip_target_set_xy(x, y, this._dragTarget);
+            this.runtimeModule.functions.catnip_target_set_xy_force(x, y, this._dragTarget);
         }
     }
 
@@ -252,6 +266,7 @@ export class CatnipProjectModule {
         if (this._dragTarget !== 0) {
             const ptr = this._dragTarget;
             this._dragTarget = 0;
+            this._setDragging(ptr, false);
             if (!this._dragMoved)
                 this.triggerEvent("IO_CLICK_TARGET", ptr);
         }

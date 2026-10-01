@@ -10,6 +10,7 @@ import { op_goto_xy } from "./goto_xy";
 import { op_glide_secs_to_xy } from "./glide_secs_to_xy";
 import { op_glide_to } from "./glide_to";
 import { op_if_on_edge_bounce } from "./if_on_edge_bounce";
+import { op_legacy_align_noop, op_legacy_scroll_noop } from "./legacy_noop";
 import { op_movesteps } from "./movesteps";
 import { op_point_direction } from "./point_direction";
 import { op_point_towards } from "./point_towards";
@@ -49,4 +50,9 @@ export default {
     motion_glide_secs_to_xy: op_glide_secs_to_xy,
     motion_if_on_edge_bounce: op_if_on_edge_bounce,
     motion_set_rotation_style: op_set_rotation_style,
+    motion_scroll_right: op_legacy_scroll_noop,
+    motion_scroll_up: op_legacy_scroll_noop,
+    motion_align_scene: op_legacy_align_noop,
+    motion_xscroll: op_const.create({ value: 0 }),
+    motion_yscroll: op_const.create({ value: 0 }),
 }

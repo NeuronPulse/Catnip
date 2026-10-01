@@ -41,6 +41,17 @@ struct catnip_thread {
   // status, so the struct outlives the thread until every owner has let go.
   // See catnip_thread_unref.
   catnip_ui32_t ref_count;
+
+  // Glide interpolation state: scratch-vm keeps this in the thread's stack
+  // frame (one frame per thread), so two glides on the same sprite run
+  // independently. Written by the glide begin block, read each tick by the
+  // step; a thread that never glides leaves it untouched.
+  catnip_f64_t glide_start_x;
+  catnip_f64_t glide_start_y;
+  catnip_f64_t glide_end_x;
+  catnip_f64_t glide_end_y;
+  catnip_f64_t glide_t0;
+  catnip_f64_t glide_duration;
 };
 
 catnip_thread *catnip_thread_new(catnip_target *target, catnip_thread_fnptr entrypoint);

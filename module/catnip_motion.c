@@ -19,12 +19,14 @@ static catnip_bool_t motion_is(const catnip_hstring *str, const char *cstr) {
   return i == len;
 }
 
-/* getSpriteTargetByName: walks every target (the stage included) and returns
-   the first whose sprite is named `name`. scratch's array lists the
-   originals first, so clones — same sprite, same name — never win here;
-   our chain is prepended, so they are skipped explicitly. */
+/* getSpriteTargetByName: walks every target except the stage and returns the
+   first whose sprite is named `name` (scratch's runtime skips isStage).
+   scratch's array lists the originals first, so clones — same sprite, same
+   name — never win here; our chain is prepended, so they are skipped
+   explicitly. */
 static catnip_target *motion_find_target(catnip_runtime *runtime, const catnip_hstring *name) {
   for (catnip_target *t = runtime->targets; t != 0; t = t->next_global) {
+    if (t->flags & CATNIP_TARGET_FLAG_IS_STAGE) continue;
     if (t->flags & CATNIP_TARGET_FLAG_IS_CLONE) continue;
     if (t->sprite->name != 0 && catnip_hstring_equal(t->sprite->name, name))
       return t;
@@ -162,43 +164,56 @@ void catnip_motion_set_rotation_style(catnip_target *target, catnip_hstring *sty
   else if (motion_is(style, "don't rotate")) target->rotation_style = CATNIP_ROTATION_STYLE_NONE;
 }
 
-void catnip_motion_glide_begin_xy(catnip_target *target, catnip_f64_t x, catnip_f64_t y, catnip_f64_t secs) {
-  target->glide_start_x = target->position_x;
-  target->glide_start_y = target->position_y;
-  target->glide_end_x = x;
-  target->glide_end_y = y;
-  target->glide_duration = secs * 1000.0;
-  target->glide_t0 = (catnip_f64_t) target->runtime->time;
+void catnip_motion_glide_begin_xy(catnip_thread *thread, catnip_f64_t x, catnip_f64_t y, catnip_f64_t secs) {
+  catnip_target *target = thread->target;
+  thread->glide_start_x = target->position_x;
+  thread->glide_start_y = target->position_y;
+  thread->glide_end_x = x;
+  thread->glide_end_y = y;
+  thread->glide_duration = secs * 1000.0;
+  thread->glide_t0 = (catnip_f64_t) target->runtime->time;
 }
 
-void catnip_motion_glide_begin_to(catnip_target *target, catnip_hstring *to, catnip_f64_t secs) {
+void catnip_motion_glide_begin_to(catnip_thread *thread, catnip_hstring *to, catnip_f64_t secs) {
   /* The menu resolves once, when the glide starts — a mouse target is where
-     it was at the beginning, like scratch's stack frame. An unresolvable
-     name leaves the end at the current position (scratch never moves). */
+     it was at the beginning, like scratch's stack frame. scratch's glideTo
+     skips the whole glide when the name matches nothing: no move, no wait —
+     a zero duration lands in place and ends the block on the first step. */
+  catnip_target *target = thread->target;
   catnip_f64_t x = target->position_x;
   catnip_f64_t y = target->position_y;
-  motion_resolve_xy(target, to, &x, &y);
+  if (!motion_resolve_xy(target, to, &x, &y)) {
+    catnip_motion_glide_begin_xy(thread, x, y, 0.0);
+    return;
+  }
 
-  catnip_motion_glide_begin_xy(target, x, y, secs);
+  catnip_motion_glide_begin_xy(thread, x, y, secs);
 }
 
-catnip_f64_t catnip_motion_glide_step(catnip_target *target) {
+catnip_f64_t catnip_motion_glide_step(catnip_thread *thread) {
+  catnip_target *target = thread->target;
   catnip_runtime *runtime = target->runtime;
-  catnip_f64_t elapsed = (catnip_f64_t) runtime->time - target->glide_t0;
-  catnip_f64_t duration = target->glide_duration;
+  catnip_f64_t elapsed = (catnip_f64_t) runtime->time - thread->glide_t0;
+  catnip_f64_t duration = thread->glide_duration;
 
   if (duration <= 0 || elapsed >= duration) {
     /* Done — snap to the final position (for a <= 0 duration this is also the
        first step: land immediately and never move anywhere else). */
-    catnip_target_set_xy(target, target->glide_end_x, target->glide_end_y);
+    catnip_target_set_xy(target, thread->glide_end_x, thread->glide_end_y);
     return 0;
   }
 
   catnip_f64_t frac = elapsed / duration;
-  catnip_f64_t dx = frac * (target->glide_end_x - target->glide_start_x);
-  catnip_f64_t dy = frac * (target->glide_end_y - target->glide_start_y);
+  catnip_f64_t dx = frac * (thread->glide_end_x - thread->glide_start_x);
+  catnip_f64_t dy = frac * (thread->glide_end_y - thread->glide_start_y);
 
-  catnip_target_set_xy(target, target->glide_start_x + dx, target->glide_start_y + dy);
+  catnip_target_set_xy(target, thread->glide_start_x + dx, thread->glide_start_y + dy);
 
   return duration - elapsed;
+}
+
+catnip_f64_t catnip_motion_limit_precision(catnip_f64_t coordinate) {
+  catnip_f64_t rounded = catnip_math_round(coordinate);
+  catnip_f64_t delta = coordinate - rounded;
+  return CATNIP_F64_ABS(delta) < 1e-9 ? rounded : coordinate;
 }

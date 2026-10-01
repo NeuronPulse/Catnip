@@ -14,6 +14,10 @@ typedef catnip_ui32_t catnip_target_flags;
 /* scratch target.draggable: set by sensing set drag mode (and loaded from
    the project), read by the host's mouse handling. */
 #define CATNIP_TARGET_FLAG_IS_DRAGGABLE CATNIP_TARGET_FLAG(3)
+/* scratch target.dragging: set while the host is dragging this target (vm
+   startDrag/stopDrag). While set, script moves through setXY are ignored —
+   the drag path forces them, like rendered-target.js setXY(x, y, force). */
+#define CATNIP_TARGET_FLAG_IS_DRAGGING CATNIP_TARGET_FLAG(4)
 
 /* Rotation styles, as scratch-vm stores them (RenderedTarget.ROTATION_*
    strings) packed into the target struct as small integers. */
@@ -69,17 +73,6 @@ struct catnip_target {
     catnip_i32_t tempo;
 
     catnip_ui32_t rotation_style;
-
-    /* Glide interpolation state (scratch-vm keeps this in the thread's stack
-       frame; an IR transient cannot be handed to C by address, so it lives on
-       the target. Two glides on one sprite at once therefore share the slot —
-       a known deviation from scratch, which keeps one frame per thread.) */
-    catnip_f64_t glide_start_x;
-    catnip_f64_t glide_start_y;
-    catnip_f64_t glide_end_x;
-    catnip_f64_t glide_end_y;
-    catnip_f64_t glide_t0;
-    catnip_f64_t glide_duration;
 
     /* Scratch's z-order among sprites: 1-based position within the sprite
        layer (higher = closer to the viewer), renumbered 1..n by every layer
@@ -149,6 +142,9 @@ void catnip_edge_hat_clear_all(struct catnip_runtime *runtime);
 /* scratch-vm's makeClone copies _edgeActivatedHatValues into the clone. */
 void catnip_edge_hat_copy(catnip_target *to, catnip_target *from);
 void catnip_target_set_xy(catnip_target* target, catnip_f64_t x, catnip_f64_t y);
+/* The host's drag path: same as catnip_target_set_xy but bypasses the
+   dragging guard, like setXY's force parameter. */
+void catnip_target_set_xy_force(catnip_target* target, catnip_f64_t x, catnip_f64_t y);
 /* Sets the direction with scratch-vm's wrapClamp(-179, 180); the stage never
    rotates, and a non-finite direction is ignored, like setDirection. */
 void catnip_target_set_direction(catnip_target *target, catnip_f64_t direction);

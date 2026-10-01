@@ -8,6 +8,7 @@ export const CATNIP_TARGET_FLAG_IS_CLONE = 1 << 0;
 export const CATNIP_TARGET_FLAG_IS_STAGE = 1 << 1;
 export const CATNIP_TARGET_FLAG_IS_VISIBLE = 1 << 2;
 export const CATNIP_TARGET_FLAG_IS_DRAGGABLE = 1 << 3;
+export const CATNIP_TARGET_FLAG_IS_DRAGGING = 1 << 4;
 
 /** Mirrors CATNIP_ROTATION_STYLE_* in module/catnip_target.h. */
 export const CATNIP_ROTATION_STYLE_ALL_AROUND = 0;
@@ -59,12 +60,6 @@ export const CatnipWasmStructTarget = new WasmStruct("catnip_target", {
 
     rotation_style: WasmUInt32,
 
-    glide_start_x: WasmFloat64,
-    glide_start_y: WasmFloat64,
-    glide_end_x: WasmFloat64,
-    glide_end_y: WasmFloat64,
-    glide_t0: WasmFloat64,
-    glide_duration: WasmFloat64,
     layer_rank: WasmInt32,
     layer_gen: WasmUInt32,
     bubble_text: WasmPtrVoid,

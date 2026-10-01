@@ -26,14 +26,19 @@ void catnip_motion_bounce(catnip_target *target);
    unknown style leaves the current one alone, like setRotationStyle. */
 void catnip_motion_set_rotation_style(catnip_target *target, catnip_hstring *style);
 
-/* glide: the begin records the start/end/time (menu versions resolve the
-   target name once, at the start); each tick one glide_step runs. The step
-   returns the milliseconds still to go — 0 means the glide is over and the
-   end position has been snapped to. A duration <= 0 or an unresolvable menu
-   ends the glide on the first step without ever moving, so the block
-   completes immediately like scratch's. */
-void catnip_motion_glide_begin_xy(catnip_target *target, catnip_f64_t x, catnip_f64_t y, catnip_f64_t secs);
-void catnip_motion_glide_begin_to(catnip_target *target, catnip_hstring *to, catnip_f64_t secs);
-catnip_f64_t catnip_motion_glide_step(catnip_target *target);
+/* glide: the begin records the start/end/time on the calling thread (menu
+   versions resolve the target name once, at the start); each tick one
+   glide_step runs. The step returns the milliseconds still to go — 0 means
+   the glide is over and the end position has been snapped to. A duration <= 0
+   or an unresolvable menu ends the glide on the first step without ever
+   moving, so the block completes immediately like scratch's. */
+void catnip_motion_glide_begin_xy(catnip_thread *thread, catnip_f64_t x, catnip_f64_t y, catnip_f64_t secs);
+void catnip_motion_glide_begin_to(catnip_thread *thread, catnip_hstring *to, catnip_f64_t secs);
+catnip_f64_t catnip_motion_glide_step(catnip_thread *thread);
+
+/* scratch3_motion.js limitPrecision (Scratch 2's snapToInteger): coordinates
+   within 1e-9 of an integer report as that integer — the x/y reporters only,
+   never the paths that feed moves. */
+catnip_f64_t catnip_motion_limit_precision(catnip_f64_t coordinate);
 
 #endif

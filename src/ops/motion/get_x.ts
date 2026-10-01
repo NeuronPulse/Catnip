@@ -8,7 +8,7 @@ export const op_get_x = new class extends CatnipInputOpType<{}> {
 
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: {}) {
 
-        ctx.emitIr(ir_get_xy, { axis: "x" }, {});
+        ctx.emitIr(ir_get_xy, { axis: "x", limitPrecision: true }, {});
     }
 }
 

@@ -233,10 +233,7 @@ void catnip_target_get_bounds(catnip_target *target, catnip_bounds *out) {
   out->bottom = target->position_y + bottom;
 }
 
-void catnip_target_set_xy(catnip_target* target, catnip_f64_t x, catnip_f64_t y) {
-  // The stage never moves (scratch-vm setXY returns for it too).
-  if (target->flags & CATNIP_TARGET_FLAG_IS_STAGE) return;
-
+static void catnip_target_set_xy_impl(catnip_target* target, catnip_f64_t x, catnip_f64_t y) {
   // scratch-vm runs every move through the renderer's fence so the costume's
   // box cannot leave the stage: the crossing edge stops FENCE_WIDTH (15px)
   // inside, or closer when the costume is smaller than twice that (which is
@@ -276,4 +273,22 @@ void catnip_target_set_xy(catnip_target* target, catnip_f64_t x, catnip_f64_t y)
 
   target->position_x = x;
   target->position_y = y;
+}
+
+void catnip_target_set_xy(catnip_target* target, catnip_f64_t x, catnip_f64_t y) {
+  // The stage never moves (scratch-vm setXY returns for it too).
+  if (target->flags & CATNIP_TARGET_FLAG_IS_STAGE) return;
+  // While the host drags this target, script moves bounce off it:
+  // rendered-target.js setXY is `if (this.dragging && !force) return;`.
+  if (target->flags & CATNIP_TARGET_FLAG_IS_DRAGGING) return;
+  // While the host drags this target, script moves bounce off it:
+  // rendered-target.js setXY is `if (this.dragging && !force) return;`.
+
+  catnip_target_set_xy_impl(target, x, y);
+}
+
+void catnip_target_set_xy_force(catnip_target* target, catnip_f64_t x, catnip_f64_t y) {
+  if (target->flags & CATNIP_TARGET_FLAG_IS_STAGE) return;
+
+  catnip_target_set_xy_impl(target, x, y);
 }

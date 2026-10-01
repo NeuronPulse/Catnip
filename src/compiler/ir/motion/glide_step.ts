@@ -17,7 +17,7 @@ export const ir_glide_step = new class extends CatnipIrInputOpType<glide_step_ir
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<glide_step_ir_inputs, {}>): void {
-        ctx.emitWasmGetCurrentTarget();
+        ctx.emitWasmGetThread();
         ctx.emitWasmRuntimeFunctionCall("catnip_motion_glide_step");
     }
 }

@@ -45,6 +45,8 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], undefined),
     catnip_target_set_xy: fn<[x: SpiderNumberType.f64, y: SpiderNumberType.f64, target: SpiderNumberType.i32]>
         ([SpiderNumberType.f64, SpiderNumberType.f64, SpiderNumberType.i32], undefined),
+    catnip_target_set_xy_force: fn<[x: SpiderNumberType.f64, y: SpiderNumberType.f64, target: SpiderNumberType.i32]>
+        ([SpiderNumberType.f64, SpiderNumberType.f64, SpiderNumberType.i32], undefined),
 
     catnip_motion_movesteps: fn<[steps: SpiderNumberType.f64, target: SpiderNumberType.i32]>
         ([SpiderNumberType.f64, SpiderNumberType.i32], undefined),
@@ -62,12 +64,14 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.i32], undefined),
     catnip_motion_set_rotation_style: fn<[style: SpiderNumberType.i32, target: SpiderNumberType.i32]>
         ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
-    catnip_motion_glide_begin_xy: fn<[x: SpiderNumberType.f64, y: SpiderNumberType.f64, secs: SpiderNumberType.f64, target: SpiderNumberType.i32]>
+    catnip_motion_glide_begin_xy: fn<[x: SpiderNumberType.f64, y: SpiderNumberType.f64, secs: SpiderNumberType.f64, thread: SpiderNumberType.i32]>
         ([SpiderNumberType.f64, SpiderNumberType.f64, SpiderNumberType.f64, SpiderNumberType.i32], undefined),
-    catnip_motion_glide_begin_to: fn<[to: SpiderNumberType.i32, secs: SpiderNumberType.f64, target: SpiderNumberType.i32]>
+    catnip_motion_glide_begin_to: fn<[to: SpiderNumberType.i32, secs: SpiderNumberType.f64, thread: SpiderNumberType.i32]>
         ([SpiderNumberType.i32, SpiderNumberType.f64, SpiderNumberType.i32], undefined),
-    catnip_motion_glide_step: fn<[target: SpiderNumberType.i32], SpiderNumberType.f64>
+    catnip_motion_glide_step: fn<[thread: SpiderNumberType.i32], SpiderNumberType.f64>
         ([SpiderNumberType.i32], SpiderNumberType.f64),
+    catnip_motion_limit_precision: fn<[coordinate: SpiderNumberType.f64], SpiderNumberType.f64>
+        ([SpiderNumberType.f64], SpiderNumberType.f64),
 
     catnip_looks_set_visible: fn<[visible: SpiderNumberType.i32, target: SpiderNumberType.i32]>
         ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),

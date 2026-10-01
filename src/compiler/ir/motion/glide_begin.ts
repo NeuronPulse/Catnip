@@ -12,7 +12,7 @@ export const ir_glide_begin = new class extends CatnipIrCommandOpType<glide_begi
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<glide_begin_ir_inputs, {}>): void {
-        ctx.emitWasmGetCurrentTarget();
+        ctx.emitWasmGetThread();
         ctx.emitWasmRuntimeFunctionCall(
             ir.inputs.mode === "xy" ? "catnip_motion_glide_begin_xy" : "catnip_motion_glide_begin_to");
     }

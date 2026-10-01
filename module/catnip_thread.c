@@ -22,6 +22,13 @@ catnip_thread *catnip_thread_new(catnip_target *target, catnip_thread_fnptr entr
 
   thread->ref_count = 1;
 
+  thread->glide_start_x = 0;
+  thread->glide_start_y = 0;
+  thread->glide_end_x = 0;
+  thread->glide_end_y = 0;
+  thread->glide_t0 = 0;
+  thread->glide_duration = 0;
+
   CATNIP_LIST_ADD(&thread->runtime->threads, catnip_thread *, thread);
 
   return thread;
